@@ -1,5 +1,14 @@
 # RC Car Motor Driver and Motor Interface
 
+## Current project baseline (2026-09-30)
+
+The adopted driver settings are type **1**, dead zone **1650**, pulse line
+**2000**, gear ratio (`Pulse_Phase`) **23**, diameter **65 mm**, and PID
+**3 / 0.375 / 0.5**. See [project motor settings](../docs/motor-settings.md) for
+E0 evidence and limits. E2 uses I2C only, rewriting the five I2C-accessible
+settings at boot while explicitly relying on saved PID. It does not use motor
+serial commands. Hardware specifications below are distinct from these settings.
+
 ## Purpose
 
 This document defines the interface between the main ESP32 controller and the motor subsystem.
@@ -105,11 +114,11 @@ For encoded motors, the documentation indicates that types 1, 2, or 3 can be use
 
 The custom motor parameters then need to be configured separately:
 
-- encoder line count: nominally **500 ppr**
-- gearbox ratio: **22.569:1 actual / 22.5:1 nominal**
+- driver encoder line count: **2000** (motor datasheet resolution is 500 ppr)
+- configured gearbox ratio: **23** (datasheet 22.569:1 actual / 22.5:1 nominal)
 - wheel diameter: **65 mm**, supplied by the user for initial commissioning
-- speed PID: initially use the board default unless testing shows that retuning is needed
-- motor dead zone: initially use default, then tune only if necessary
+- speed PID: **P=3, I=0.375, D=0.5**, already stored after E0
+- motor dead zone: **1650**, retained from commissioning
 
 ### Important Gear-Ratio Issue
 
@@ -254,7 +263,7 @@ The UART documentation explicitly marks the motor type, dead zone, encoder line 
 
 The I2C documentation does **not** explicitly state whether configuration-register writes are stored in flash. This should be tested.
 
-If UART-configured parameters remain stored in flash, the final main controller does not need to know the detailed motor model at all.
+Project policy: rely on saved PID only. Rewrite type, dead zone, encoder line count, gear ratio and diameter over I2C at every ESP32 boot; no new motor UART commands are sent in E2.
 
 ### Runtime
 

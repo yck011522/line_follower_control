@@ -3,6 +3,7 @@
 | Document | Purpose |
 | --- | --- |
 | [System design](system-design.md) | Architecture, rates, steering behavior, and integration boundaries |
+| [Motor settings and tuning](motor-settings.md) | Adopted settings, persistent PID exception, E0 evidence, RTS-off rule |
 | [Hardware and pins](hardware.md) | Wiring intent, pin namespaces, buses, power, and missing hardware details |
 | [Communication](communication.md) | World-state/telemetry semantics and pending wire protocol decisions |
 | [Testing](testing.md) | PlatformIO environment plan, deterministic Python workflow, and measurements |

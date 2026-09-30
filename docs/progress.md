@@ -8,6 +8,8 @@ Status vocabulary: **planned**, **in progress**, **blocked**, **complete**. Mark
 | Requirements capture | Complete | Initial brief captured; unresolved items tracked in open questions |
 | Board and interface confirmation | In progress | XIAO ESP32S3 and D-label wiring confirmed: motor D4/D5, line sensor D6/D7; motor reference supplied; read formats pending; E3 sensor deferred |
 | PlatformIO and host-runner setup | In progress | Core 6.1.19; E1 builds/uploads on COM4; interactive serial works; automation deferred |
+| E0: motor PID | Complete for baseline selection | PID 3/0.375/0.5 adopted; [evidence](../test/E0_motor_tuning/TUNING_RESULTS.md); target 10 and loaded steering unresolved |
+| E2: low-speed mapping | In progress | Fixed I2C -100..100 sweep, boot settings, Python capture and plots; revised hardware test pending |
 | E3: line sensor | Planned | Driver, firmware, Python runner, CSV and timing summary |
 | E1: motor driver (first) | In progress | [Five-second runs](../test/E1_motor_communication/LONG_RUN_RESULTS.md): 100/400 kHz communication and both-motor motion verified; zero-speed hold oscillates; scaling/tuning pending |
 | E4: NFC reader | Planned | UID-only reader, present/absent timing and event behavior |
@@ -16,6 +18,20 @@ Status vocabulary: **planned**, **in progress**, **blocked**, **complete**. Mark
 | Driving validation | Planned | 100 mm/s tracking on 14 mm lines and 30–50 mm turns; higher-rate/speed trials |
 
 ## Development log
+
+### 2026-09-30 - E0 baseline and E2 simplification
+
+- Adopted type 1, dead zone 1650, pulse line 2000, ratio 23, diameter 65 mm, and
+  PID 3/0.375/0.5. [Project reference](motor-settings.md) distinguishes measured
+  improvements from unresolved target-10 hunting and untested loaded steering.
+- User chose I2C-only E2 and explicit reliance on saved PID. Reapply the other
+  five settings at every ESP32 boot. PID is recorded as assumed, not read back.
+- Simplified E2 to start/stop/status/config/help with a fixed -100..100 step-10
+  sweep, 1 s baseline, 1 s settling, 2 s measuring, and 1 s zero rest per target.
+- Added schema-2 capture, encoder speed analysis, and command-to-speed plots.
+  Historical logs/plots are preserved. Revised firmware has not been bench-run.
+- Added a root AGENTS.md rule: all Python test ports set RTS off before opening.
+
 
 ### 2026-09-30 — Longer runs at two bus clocks
 

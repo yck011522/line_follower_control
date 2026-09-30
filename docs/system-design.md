@@ -19,6 +19,13 @@ Each robot:
 
 The motor driver owns low-level encoder feedback and motor speed PID control. Robot firmware supplies wheel-speed targets and reads available driver telemetry, including battery voltage. Host responsibilities include world-state generation and robot monitoring. The location and distribution of the NFC meaning dictionary remain to be decided.
 
+The current motor baseline is [type 1, dead zone 1650, pulse line 2000, ratio 23,
+diameter 65 mm, PID 3/0.375/0.5](motor-settings.md). On ESP32 boot, rewrite the
+five I2C-accessible settings, require acknowledgments, and keep motion disabled
+until initialization succeeds. Rely on saved driver PID; it cannot be verified or
+set through the documented I2C interface. No motor-driver UART is required.
+E0 did not resolve smooth target-10 operation or validate loaded cornering.
+
 Separate buses allow independent peripheral configuration and scheduling. They do not by themselves guarantee concurrent transactions or a faster loop: driver blocking time, device conversion time, bus speed, and scheduling must be measured.
 
 ## Performance targets

@@ -10,6 +10,16 @@ Once board/framework details are known, configure each environment to compile on
 
 The `test/` directory is intended for host-driven hardware experiments. If PlatformIO unit testing is added later, configure discovery separately so these Python experiments are not mistaken for embedded unit tests.
 
+## Serial settings and motor baseline
+
+Every Python test connection to the driver or ESP32 must set `rts=False` before
+opening the port (`serial.Serial(port=None, ...)`, DTR on, RTS off, then open).
+Disabling hardware flow control alone is insufficient. Use bounded waits and
+attempt stop/release on cancellation. See [motor settings](motor-settings.md)
+for the tested parameters and the explicit exception that E2 relies on saved PID.
+The active E2 workflow is implemented in `test/E2_motor_speed/capture.py`; it
+captures schema-2 logs, analyzes encoder speed, and writes `summary.png`.
+
 ## Intended Python workflow
 
 1. Accept an explicit serial port, environment, duration/sample count, and experiment parameters. Support skipping upload for repeat runs.
@@ -56,7 +66,7 @@ Current order: **E0 → E1 → E2 → E3 → E4 → E5**. IDs identify experimen
 | E0 motor tuning | Direct USB, one PID candidate, M2 or M4 steps from zero at 20/40/60/80 | Stored settings/PID readback, baseline, ramp-up, oscillation, and stop traces |
 | E3 line sensor | Read all eight channels, record values and timing; compare requested rates | Correct channel order/polarity, fresh-data behavior, bus errors, latency distribution, measured sustainable rate |
 | E1 motor driver | Command bounded wheel speeds, read speed and battery telemetry where supported | Protocol/units verified; write/read durations, physical stop behavior, feedback availability |
-| E2 motor speed | Both motors, -240 to +240 in steps of 20; one second settling plus one second measurement | Raw counts/s versus command, provisional mm/s estimates, settling drift; forward direction deferred |
+| E2 motor speed | I2C only; fixed -100..100 step 10; zero baseline/rest; 1 s settling + 2 s measuring | M2/M4 command-to-counts/s mapping and nominal mm/s estimate; stored PID 3/0.375/0.5 assumed, five other settings rewritten at boot |
 | E4 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
 | E5 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
 

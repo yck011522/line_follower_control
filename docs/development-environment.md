@@ -42,4 +42,14 @@ COM numbers can change after USB reconnect/reset or on another computer. Future 
 
 ## Python runner environment
 
-A repository `.venv/` was created during commissioning with pyserial 3.5 for plain serial capture and pypdf 6.19.0 for a one-time reference inspection. No automated runner or data parser was added. Interactive use only requires the PlatformIO monitor. Keep the VS Code PlatformIO environment separate; `.venv/` is ignored by Git.
+A repository `.venv/` was created during commissioning with pyserial 3.5 for plain serial capture and pypdf 6.19.0 for a one-time reference inspection. E0 and E2 now have Python capture and analysis tools; install their requirements files into this environment. Interactive use only requires the PlatformIO monitor. Keep the VS Code PlatformIO environment separate; `.venv/` is ignored by Git.
+
+## Required Python serial-port setup
+
+For ALL automatic tests connected to either the motor driver or ESP32, construct
+pySerial with `port=None`, set `dtr=True` and `rts=False`, assign the port name,
+then call `open()`. Keep RTS off throughout the session. Do not set it only after
+opening. `rtscts=False` disables flow control but does not set RTS low.
+E2 opens only the ESP32 USB port (historically COM4); E0 used driver USB COM5.
+Recheck port enumeration after changing cables. Firmware upload/reset tooling is
+separate from these test-port rules. See [motor settings](motor-settings.md).

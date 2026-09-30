@@ -31,3 +31,13 @@ Line-sensor wiring is SDA D6 (GPIO43), SCL D7 (GPIO44), on the second I²C contr
 - Branch behavior across stop/resume and topology updates; choice when no valid indicator exists at entry.
 - Startup readiness, command freshness timeout, line-loss recovery, and topology mismatch response.
 - Confirm communication field formats, ID provisioning, USB framing, radio setup, and acknowledgment semantics described in [communication](communication.md).
+
+## Remaining after E0 baseline selection
+
+- PID 3/0.375/0.5 and other adopted settings are recorded in [motor-settings](motor-settings.md).
+  PID persistence is deliberately relied on in I2C-only E2; no boot readback is possible.
+- Validate revised E2 on the ESP32, including reverse motion and both motors.
+- Calibrate encoder counts/output revolution and physical speed independently;
+  the 2000*23 scale is nominal, not established odometry.
+- Investigate target-10 stop/start feedback and zero-speed hunting; validate
+  normal-to-low-speed transitions and unequal wheel speeds under vehicle load.

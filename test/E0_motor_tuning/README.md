@@ -89,10 +89,10 @@ The PDF distinguishes zero speed (PID remains active) from zero PWM (release).
 E0 deliberately keeps zero-speed PID active between trials so zero-speed
 oscillation is visible, and releases the outputs at the end.
 
-**E1/E2 currently configure 500 encoder lines at startup.** Those older experiments
-can replace the 2000-line setup used here. Recheck `$read_flash#` when returning
-to E0. The motor's 500 ppr specification and the driver's configured 2000 are
-distinct quantities; E0 uses your established driver configuration.
+**The historical E1 firmware configures 500 encoder lines at startup.** It can
+replace the 2000-line setup used here. Revised E2 reapplies the adopted 2000-line
+setting. The motor's 500 ppr specification and the driver's configured 2000 are
+distinct quantities; see the [project motor baseline](../../docs/motor-settings.md).
 
 ## Results and comparison
 

@@ -40,10 +40,17 @@ Start with the [documentation index](docs/README.md), [pin assignments](docs/har
 
 ## Current status
 
-The interactive E1 motor tester builds and uploads to the Seeed Studio XIAO ESP32S3. One firmware automatically configures the driver at startup and supports 100/400 kHz I²C checks, manual encoder observation, and five-second M2/M4 or both-motor runs through serial commands. See the [operator guide](test/E1_motor_communication/README.md). Automated Python runners and integrated robot firmware remain future work; hardware validation is in progress.
+The interactive E1 motor tester builds and uploads to the Seeed Studio XIAO ESP32S3. One firmware automatically configures the driver at startup and supports 100/400 kHz I²C checks, manual encoder observation, and five-second M2/M4 or both-motor runs through serial commands. See the [operator guide](test/E1_motor_communication/README.md). E0 has recorded tuning results. E2 has a Python capture/analysis runner; the revised E2 firmware awaits hardware validation. Integrated robot firmware remains future work.
 
 Experiments are now numbered by test: **E0 Motor PID Tuning → E1 Motor Driver Communication Test → E2 Motor Speed Command Test → E3 line sensor → E4 NFC reader → E5 wireless → integration**. Existing folders and results were moved to match; historical measurement values remain unchanged. Each PlatformIO environment selects one application and reuses modules from `lib/`.
 
-The default environment is `e2_motor_speed`; `e1_motor_communication` remains independently buildable. Both default to 400 kHz motor I²C. E2 sweeps both motors from -240 to +240 in steps of 20, with one second settling plus one second measuring at each command. See the [E2 guide](test/E2_motor_speed/README.md).
+The default environment is `e2_motor_speed`. E2 now uses I2C only at 400 kHz,
+reapplies type 1 / dead zone 1650 / pulse line 2000 / ratio 23 / diameter 65 mm
+at ESP32 boot, and relies on the driver's saved **PID 3 / 0.375 / 0.5**.
+Its fixed M2/M4 sweep covers **-100 to +100 in steps of 10**, returning to zero
+between targets. Python captures encoder feedback and plots commanded versus
+measured speed. See the [E2 guide](test/E2_motor_speed/README.md) and the
+[project motor settings and E0 findings](docs/motor-settings.md).
+All Python test connections must set **RTS off before opening the port**.
 
 Start with [E0 direct USB PID tuning](test/E0_motor_tuning/README.md), then the [E1 motor test plan](test/E1_motor_communication/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).

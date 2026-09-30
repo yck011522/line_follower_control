@@ -1,7 +1,12 @@
-# E2 — Motor Speed Command Test
+﻿# E2 - Fixed low-speed I2C sweep
 
-Independent application in [main.cpp](main.cpp), using the shared `MotorDriver` library. PlatformIO environment: `e2_motor_speed`. Motor communication uses 400 kHz on D4/D5 with repeated START.
+[main.cpp](main.cpp) uses the shared MotorDriver register interface and
+[MotorSettings.h](../../lib/MotorDriver/include/MotorSettings.h). No motor UART
+is used. Boot rewrites five I2C settings; PID 3/0.375/0.5 is assumed in driver flash.
 
-Startup configures and releases the motors. Serial `start` performs one simultaneous M2/M4 sweep from -240 through +240 in increments of 20. Each step has one second settling plus one second measurement; the full run is approximately 50 seconds. `stop` or `!` cancels. No motion starts on reset.
+`start` sweeps M2/M4 together from -100 through +100 in steps of 10, with zero
+baseline and rest at every target. Measurement uses cumulative encoder counts
+and actual timestamps. No automatic motion at boot, no runtime tuning options.
 
-See the [operator and analysis guide](../../test/E2_motor_speed/README.md).
+See the [E2 operator guide](../../test/E2_motor_speed/README.md) and
+[project motor settings](../../docs/motor-settings.md).
