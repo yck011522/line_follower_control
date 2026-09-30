@@ -4,7 +4,7 @@
 
 | Component | Known information | Pending |
 | --- | --- | --- |
-| Robot controller | Seeed Studio XIAO ESP32S3, USB; PlatformIO board `seeed_xiao_esp32s3` | Arduino selected for initial E2 setup; firmware not implemented |
+| Robot controller | Seeed Studio XIAO ESP32S3, USB; PlatformIO board `seeed_xiao_esp32s3`; E1 Arduino firmware uploaded | Integrated robot firmware pending |
 | Motor controller | Four-channel board, I²C address `0x26` at 5 V through a level converter; M2 left/M4 right; GT50 motors | See [interface reference](../reference/RC_Car_Motor_Driver_Interface.md); command units, read encoding, scaling, timing, and motor type still need verification |
 | Line sensor | Eight downward channels; I²C through a level converter | Model, supply/logic voltage, address, protocol, update rate |
 | NFC reader | RC522 over SPI; read UID only; IRQ unconnected | Module, supply/logic requirements, compatible tags, library |
@@ -38,8 +38,10 @@ In Arduino code, use aliases such as `D4`, not the bare integer `4`: the install
 
 ## Bus configuration still required
 
+Motor I²C default is now **400 kHz**, based on E1 bench measurements. E1 retains 100 kHz as a diagnostic option; new motor tests use 400 kHz. The line sensor's supported clock remains unconfirmed.
+
 - Assign primary I²C to the motor driver and a separate I²C controller to the line sensor.
 - Confirm device addresses, allowed clock rates, clock stretching, and timeout behavior from the device documentation.
 - Confirm level-converter suitability, pull-ups, and logic voltage on each side. The line sensor's voltage has not been supplied.
 - Confirm the RC522 module's SPI clock limit and electrical requirements before wiring. Do not infer 5 V compatibility from the motor bus.
-- Record sensor channel order, lateral sensor spacing, sensor-to-axle distance, wheel diameter, and track width before steering calibration.
+- Wheel diameter is 65 mm, supplied by the user. Record sensor channel order, lateral sensor spacing, sensor-to-axle distance, and track width before steering calibration.

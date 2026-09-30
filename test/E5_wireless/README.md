@@ -1,6 +1,6 @@
-# E4 — Wireless/bridge experiment
+# E5 — Wireless/bridge experiment
 
-Status: planned. Firmware: [src/e4_wireless](../../src/e4_wireless/README.md).
+Status: planned. Firmware: [src/e5_wireless](../../src/e5_wireless/README.md).
 
 The future `run.py` will identify bridge and robot ports explicitly, upload the relevant roles, and measure matched request/response round trips. Start with one robot, then exercise all four at 50 Hz world-state broadcasts and 20 Hz telemetry per robot. Track loss, duplicates, ordering, acknowledged sequence numbers, and latency distributions.
 

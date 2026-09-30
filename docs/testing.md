@@ -2,7 +2,9 @@
 
 ## Layout and build plan
 
-Each experiment has firmware in `src/eN_name/` and a Python runner plus generated results in `test/EN_name/`. Shared drivers belong in `lib/`. Proposed PlatformIO environment names match firmware directory names; `robot` and `bridge` are reserved for integration. E4 may need distinct robot and bridge environments.
+[E0 motor tuning](../test/E0_motor_tuning/README.md) is a host-only Python experiment connected directly to the motor driver USB port, with no ESP32 firmware or PlatformIO environment. It verifies stored configuration and PID readback, records speed steps, and plots the responses.
+
+Each subsequent experiment has firmware in `src/eN_name/` and a Python runner plus generated results in `test/EN_name/`. Shared drivers belong in `lib/`. Proposed PlatformIO environment names match firmware directory names; `robot` and `bridge` are reserved for integration. E5 may need distinct robot and bridge environments.
 
 Once board/framework details are known, configure each environment to compile only its intended entry point using source filters. Hardware drivers must not be copied between experiments and integration. Keep device addresses, bus objects, and pin configuration explicit at application boundaries.
 
@@ -17,16 +19,16 @@ The `test/` directory is intended for host-driven hardware experiments. If Platf
 5. Send an explicit start request with a run ID and parameters. Firmware confirms the request before sampling.
 6. Capture structured records until a completion response, timeout, disconnect, or user interruption. Record failures as incomplete runs.
 7. Write raw captures, CSV measurements, a Markdown summary, and optional Matplotlib plots to the experiment's results directory.
-8. Stop activity and release the port on completion/interruption. E2 firmware also needs a bounded local motor run so host disconnection cannot leave a test running indefinitely.
+8. Stop activity and release the port on completion/interruption. E1 firmware also needs a bounded local motor run so host disconnection cannot leave a test running indefinitely.
 
-The exact serial command/record schema remains to be designed with E2, now the first experiment. It should distinguish ready, start acknowledgment, samples, errors, and completion, and include sample indices plus device timestamps. Do not depend on arbitrary startup sleep durations alone.
+The exact serial command/record schema remains to be designed with E1, the first ESP32 experiment. It should distinguish ready, start acknowledgment, samples, errors, and completion, and include sample indices plus device timestamps. Do not depend on arbitrary startup sleep durations alone.
 
-Proposed future runner name: `run.py` in each experiment folder. No runner or command schema exists yet.
+Proposed future runner name: `run.py` in each experiment folder. E0 already has a direct-driver runner; this proposed workflow concerns future ESP32 runners.
 
 ## Results convention
 
 ```text
-test/E1_line_sensor/results/<UTC-run-id>/
+test/E3_line_sensor/results/<UTC-run-id>/
   metadata.json      Run parameters and hardware/software identity
   serial.log        Original serial capture
   samples.csv       Multi-row measurements
@@ -47,13 +49,15 @@ Use a unique directory per run; never overwrite previous evidence. Record UTC st
 
 ## Experiment sequence
 
-Current order: **E2 → E1 → E3 → E4**; retain existing folder IDs. The detailed [E2 plan](../test/E2_motor_driver/PLAN.md) covers motor commissioning and matched 100/400 kHz bus tests.
+Current order: **E0 → E1 → E2 → E3 → E4 → E5**. IDs identify experiments, not peripherals. Existing experiment folders/results were renamed to match. The [E1 plan](../test/E1_motor_communication/PLAN.md) covers motor communication; [E2](../test/E2_motor_speed/README.md) is the separate speed-command sweep. Motor I²C now defaults to 400 kHz.
 
 | Experiment | Initial scope | Evidence needed before integration |
 | --- | --- | --- |
-| E1 line sensor | Read all eight channels, record values and timing; compare requested rates | Correct channel order/polarity, fresh-data behavior, bus errors, latency distribution, measured sustainable rate |
-| E2 motor driver | Command bounded wheel speeds, read speed and battery telemetry where supported | Protocol/units verified; write/read durations, physical stop behavior, feedback availability |
-| E3 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
-| E4 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
+| E0 motor tuning | Direct USB, one PID candidate, M2 or M4 steps from zero at 20/40/60/80 | Stored settings/PID readback, baseline, ramp-up, oscillation, and stop traces |
+| E3 line sensor | Read all eight channels, record values and timing; compare requested rates | Correct channel order/polarity, fresh-data behavior, bus errors, latency distribution, measured sustainable rate |
+| E1 motor driver | Command bounded wheel speeds, read speed and battery telemetry where supported | Protocol/units verified; write/read durations, physical stop behavior, feedback availability |
+| E2 motor speed | Both motors, -240 to +240 in steps of 20; one second settling plus one second measurement | Raw counts/s versus command, provisional mm/s estimates, settling drift; forward direction deferred |
+| E4 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
+| E5 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
 
 After individual tests, measure the complete control cycle under concurrent sensing, motor traffic, wireless traffic, and telemetry. Individual operation timings alone do not establish the integrated loop budget. Bench-validate motor commands with wheels clear before driving tests; confirm wheel direction and stop behavior first.

@@ -1,6 +1,6 @@
-# E1 — Line-sensor experiment
+# E3 — Line-sensor experiment
 
-Status: planned. Firmware: [src/e1_line_sensor](../../src/e1_line_sensor/README.md).
+Status: planned. Firmware: [src/e3_line_sensor](../../src/e3_line_sensor/README.md).
 
 The future `run.py` will upload, wait for readiness, trigger a bounded acquisition, and capture all eight sensor channels and operation timing. Verify channel order, polarity, repeat/fresh-data behavior, and errors before comparing 50 Hz, 100 Hz, and higher requested rates.
 

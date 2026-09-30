@@ -20,25 +20,30 @@ Initial targets are a 50 Hz internal control loop, 50 Hz world-state broadcasts,
 docs/                       System requirements, interfaces, and progress
 lib/                        Reusable firmware drivers and control/protocol modules
 src/
-  e1_line_sensor/            Standalone line-sensor experiment
-  e2_motor_driver/           Standalone motor-driver experiment
-  e3_nfc_reader/             Standalone RC522 experiment
-  e4_wireless/               Robot/bridge communication experiment
+  e1_motor_communication/    Motor-driver communication and basic motion
+  e2_motor_speed/            Separate motor speed-command sweep
+  e3_line_sensor/            Future line-sensor experiment
+  e4_nfc_reader/             Standalone RC522 experiment
+  e5_wireless/               Robot/bridge communication experiment
   robot/                    Future integrated robot application
   bridge/                   Future USB radio bridge application
 test/
-  E1_line_sensor/            Future Python runner and E1 results
-  E2_motor_driver/           Future Python runner and E2 results
-  E3_nfc_reader/             Future Python runner and E3 results
-  E4_wireless/               Future Python runner and E4 results
+  E0_motor_tuning/           Direct USB PID tuning and speed-response plots
+  E1_motor_communication/    Communication test guide and results
+  E2_motor_speed/            Speed-sweep analysis and results
+  E3_line_sensor/            Future Python runner and E3 results
+  E4_nfc_reader/             Future Python runner and E4 results
+  E5_wireless/               Future Python runner and E5 results
 ```
 
 Start with the [documentation index](docs/README.md), [pin assignments](docs/hardware.md), and [development progress](docs/progress.md). The [test workflow](docs/testing.md) defines the intended automation and result layout.
 
 ## Current status
 
-This repository contains the project structure, design documentation, and a PlatformIO configuration for the Seeed Studio XIAO ESP32S3. No firmware, Python runners, validated hardware drivers, or performance results exist yet. The configured E2 environment still needs its firmware entry point before building. See [development environment](docs/development-environment.md) for the verified PlatformIO installation and observed COM4 port.
+The interactive E1 motor tester builds and uploads to the Seeed Studio XIAO ESP32S3. One firmware automatically configures the driver at startup and supports 100/400 kHz I²C checks, manual encoder observation, and five-second M2/M4 or both-motor runs through serial commands. See the [operator guide](test/E1_motor_communication/README.md). Automated Python runners and integrated robot firmware remain future work; hardware validation is in progress.
 
-Development order: **E2 motor driver → E1 line sensor → E3 NFC reader → E4 wireless → integration**. Experiment IDs remain unchanged. Each PlatformIO environment will select one application and reuse modules from `lib/`.
+Experiments are now numbered by test: **E0 Motor PID Tuning → E1 Motor Driver Communication Test → E2 Motor Speed Command Test → E3 line sensor → E4 NFC reader → E5 wireless → integration**. Existing folders and results were moved to match; historical measurement values remain unchanged. Each PlatformIO environment selects one application and reuses modules from `lib/`.
 
-Start with the [E2 motor test plan](test/E2_motor_driver/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).
+The default environment is `e2_motor_speed`; `e1_motor_communication` remains independently buildable. Both default to 400 kHz motor I²C. E2 sweeps both motors from -240 to +240 in steps of 20, with one second settling plus one second measuring at each command. See the [E2 guide](test/E2_motor_speed/README.md).
+
+Start with [E0 direct USB PID tuning](test/E0_motor_tuning/README.md), then the [E1 motor test plan](test/E1_motor_communication/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).

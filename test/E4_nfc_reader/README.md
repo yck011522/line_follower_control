@@ -1,6 +1,6 @@
-# E3 — NFC-reader experiment
+# E4 — NFC-reader experiment
 
-Status: planned. Firmware: [src/e3_nfc_reader](../../src/e3_nfc_reader/README.md).
+Status: planned. Firmware: [src/e4_nfc_reader](../../src/e4_nfc_reader/README.md).
 
 The future `run.py` will capture UID-only reads, durations, tag absence, and reader errors. Include continuous presence, removal/re-entry, and different UIDs. Moving-pass tests follow bench timing; repeated detection must be distinguishable from a new navigation event.
 

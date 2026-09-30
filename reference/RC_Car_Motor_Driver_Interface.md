@@ -107,7 +107,7 @@ The custom motor parameters then need to be configured separately:
 
 - encoder line count: nominally **500 ppr**
 - gearbox ratio: **22.569:1 actual / 22.5:1 nominal**
-- wheel diameter: **TBD**
+- wheel diameter: **65 mm**, supplied by the user for initial commissioning
 - speed PID: initially use the board default unless testing shows that retuning is needed
 - motor dead zone: initially use default, then tune only if necessary
 
@@ -314,7 +314,7 @@ The following should remain open until the motor/encoder documentation or bench 
 - A/B electrical levels and polarity with this driver board
 - whether 500 ppr is interpreted by the board exactly as expected
 - how the firmware handles the fractional 22.569 gearbox ratio
-- exact wheel diameter
+- effective rolling diameter calibration (nominal wheel diameter is 65 mm)
 - correct predefined motor-type ID for encoder direction
 - whether I2C configuration writes persist across power cycles
 - supported I2C clock rate: 100 kHz, 400 kHz, or otherwise

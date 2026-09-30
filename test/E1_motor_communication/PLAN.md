@@ -1,6 +1,6 @@
-# E2 motor commissioning and I²C timing plan
+# E1 motor commissioning and I²C timing plan
 
-Status: **plan only; no upload or motor commands executed**. E2 is now the first hardware experiment; retain the existing experiment IDs.
+Status: **initial interactive firmware implemented and uploaded; bench validation in progress**. The [operator guide](README.md) describes the current subset. This document retains the broader commissioning/automation roadmap; E1 remains the first hardware experiment.
 
 Source: [motor/driver interface reference](../../reference/RC_Car_Motor_Driver_Interface.md). This is sufficient to design the experiment, but some wire details and physical-speed scaling still need confirmation before closed-loop motion.
 
@@ -34,7 +34,7 @@ Start with **type 1 (520)** only as a commissioning candidate. Types 1–3 may d
 
 The GT50 reference specifies 500 ppr and 22.569:1 gearing. Verify the pulse/edge convention by manually rotating the output wheel a known number of turns with output released. About 11,284.5 cycles/output revolution is a reference calculation; a quadrature-edge count may differ by a factor of two or four. Do not assume the driver’s `encoder line count` uses the same convention as the motor datasheet.
 
-Measure wheel diameter before any diameter-dependent speed command. The uint16 gearbox setting cannot express 22.569 directly under the supplied description. If an integer must be used for a provisional bench test, document 23 as an approximation only after the speed formula is known, and label the physical-speed scale uncalibrated. Retain raw counts as the primary evidence. Keep default PID/dead-zone settings initially; do not assume they are tuned for this motor.
+The user supplied a 65 mm wheel diameter. The uint16 gearbox setting cannot express 22.569 directly under the supplied description. Initial short bench pulses use 23 as an explicitly provisional approximation while the speed formula is still unverified, following the user's preference to test locally. Physical speed remains uncalibrated. Retain raw counts as the primary evidence. Keep default PID/dead-zone settings initially; do not assume they are tuned for this motor.
 
 Configuration writes may be persistent. Perform them only during explicit commissioning, record exact values, and never rewrite configuration at the sampling rate. Configuration readback and persistence are not established by the I²C reference; report values as requested, not verified.
 
