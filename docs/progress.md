@@ -21,7 +21,7 @@ Status vocabulary: **planned**, **in progress**, **blocked**, **complete**. Mark
 
 ### 2026-09-30 - E0 baseline and E2 simplification
 
-- Adopted type 1, dead zone 1650, pulse line 2000, ratio 23, diameter 65 mm, and
+- Adopted type 1, dead zone 1650, pulse line 500, ratio 23, diameter 65 mm, and
   PID 3/0.375/0.5. [Project reference](motor-settings.md) distinguishes measured
   improvements from unresolved target-10 hunting and untested loaded steering.
 - User chose I2C-only E2 and explicit reliance on saved PID. Reapply the other

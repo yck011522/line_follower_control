@@ -45,7 +45,7 @@ The interactive E1 motor tester builds and uploads to the Seeed Studio XIAO ESP3
 Experiments are now numbered by test: **E0 Motor PID Tuning → E1 Motor Driver Communication Test → E2 Motor Speed Command Test → E3 line sensor → E4 NFC reader → E5 wireless → integration**. Existing folders and results were moved to match; historical measurement values remain unchanged. Each PlatformIO environment selects one application and reuses modules from `lib/`.
 
 The default environment is `e2_motor_speed`. E2 now uses I2C only at 400 kHz,
-reapplies type 1 / dead zone 1650 / pulse line 2000 / ratio 23 / diameter 65 mm
+reapplies type 1 / dead zone 1650 / pulse line 500 / ratio 23 / diameter 65 mm
 at ESP32 boot, and relies on the driver's saved **PID 3 / 0.375 / 0.5**.
 Its fixed M2/M4 sweep covers **-100 to +100 in steps of 10**, returning to zero
 between targets. Python captures encoder feedback and plots commanded versus

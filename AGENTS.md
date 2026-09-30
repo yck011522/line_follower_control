@@ -1,7 +1,7 @@
 # Project working conventions
 
 - Read `docs/motor-settings.md` before changing motor configuration or experiments.
-  The adopted baseline is type 1, dead zone 1650, pulse line 2000, pulse phase
+  The adopted baseline is type 1, dead zone 1650, pulse line 500, pulse phase
   (gear ratio) 23, wheel diameter 65 mm, PID P=3/I=0.375/D=0.5.
 - Reapply type, dead zone, pulse line, ratio and diameter over I2C at each ESP32
   boot; require successful acknowledgments before motion. PID is the explicit

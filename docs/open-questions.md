@@ -37,7 +37,7 @@ Line-sensor wiring is SDA D6 (GPIO43), SCL D7 (GPIO44), on the second I²C contr
 - PID 3/0.375/0.5 and other adopted settings are recorded in [motor-settings](motor-settings.md).
   PID persistence is deliberately relied on in I2C-only E2; no boot readback is possible.
 - Validate revised E2 on the ESP32, including reverse motion and both motors.
-- Calibrate encoder counts/output revolution and physical speed independently;
-  the 2000*23 scale is nominal, not established odometry.
+- Calibrate physical speed independently; the hand-measured 44998 counts per
+  wheel revolution gives a nominal scale, not established odometry.
 - Investigate target-10 stop/start feedback and zero-speed hunting; validate
   normal-to-low-speed transitions and unequal wheel speeds under vehicle load.

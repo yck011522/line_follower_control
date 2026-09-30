@@ -1,4 +1,5 @@
 """Exercise real capture/analysis code without opening hardware or moving motors."""
+
 import csv
 import io
 import json
@@ -13,27 +14,36 @@ import capture
 import plot
 
 
-def synthetic_log():
+def synthetic_log(lo=-100, hi=100, inc=10):
     """A known +/- mapping crossing both the count and microsecond timer wrap."""
+    targets = list(range(lo, hi + 1, inc))
     lines = [
         "# END reason=user_stop rows=0",  # Pre-handshake END must be ignored.
-        "# SETTINGS type=1 deadzone=1650 lines=2000 ratio=23 diameter_mm=65.0 pid=3,0.375,0.5 pid_source=stored_unverified",
-        "# START schema=2 min=-100 max=100 inc=10 steps=21 baseline_ms=1000 settle_ms=1000 measure_ms=2000 rest_ms=1000",
+        "# SETTINGS type=1 deadzone=1650 lines=500 ratio=23 diameter_mm=65.0 pid=3,0.375,0.5 pid_source=stored_unverified",
+        f"# START schema=2 min={lo} max={hi} inc={inc} steps={len(targets)} baseline_ms=1000 settle_ms=1000 measure_ms=2000 rest_ms=1000",
         "step,command,phase,step_ms,t2_us,m2_count,t4_us,m4_count,m2_recent,m4_recent,write_us,read_us,applied",
     ]
     counter, timestamp = 2**31 + 10, 2**32 - 100000
     rows = 0
-    for step, command in enumerate(range(-100, 101, 10)):
+    for step, command in enumerate(targets):
         for ms in range(0, 5000, 20):
-            phase = "baseline" if ms < 1000 else "settle" if ms < 2000 else "measure" if ms < 4000 else "rest"
+            phase = (
+                "baseline"
+                if ms < 1000
+                else "settle" if ms < 2000 else "measure" if ms < 4000 else "rest"
+            )
             applied = command if phase in ("settle", "measure") else 0
             counter += applied * 2  # 100 counts/s per command unit at 20 ms.
             timestamp += 20000
             count = (counter + 2**31) % 2**32 - 2**31
-            lines.append(f"{step},{command},{phase},{ms},{timestamp % 2**32},{count},{(timestamp+300) % 2**32},{count},{applied},{applied},200,1000,{applied}")
+            lines.append(
+                f"{step},{command},{phase},{ms},{timestamp % 2**32},{count},{(timestamp+300) % 2**32},{count},{applied},{applied},200,1000,{applied}"
+            )
             rows += 1
-    lines += [f"# END reason=complete rows={rows} dropped=0 missed_ticks=0 errors=0 stop_ack=1 release_ack=1",
-              "# CLEANUP # END reason=user_stop rows=5250"]
+    lines += [
+        f"# END reason=complete rows={rows} dropped=0 missed_ticks=0 errors=0 stop_ack=1 release_ack=1",
+        "# CLEANUP # END reason=user_stop rows=5250",
+    ]
     return "\n".join(lines) + "\n"
 
 
@@ -68,7 +78,7 @@ class Port:
             self.pending = b"# END reason=user_stop\n"
         elif data == b"status\n":
             self.pending += b"# STATUS configured=1 running=0 schema=2 clock=400000\n"
-        elif data == b"start\n":
+        elif data.startswith(b"start"):
             self.started = True
             self.pending += synthetic_log().encode()
         return len(data)
@@ -102,9 +112,24 @@ class E2Tests(unittest.TestCase):
         for row in rows:
             expected = int(row["command"]) * 100
             self.assertAlmostEqual(float(row["m2_counts_s"]), expected)
-            self.assertAlmostEqual(float(row["m4_estimated_mm_s"]), expected * math.pi * 65 / 46000)
+            self.assertAlmostEqual(
+                float(row["m4_estimated_mm_s"]), expected * math.pi * 65 / 44998
+            )
         plot.plot_run(self.folder)
         self.assertGreater((self.folder / "summary.png").stat().st_size, 1000)
+
+    def test_parametric_range(self):
+        self.log.write_text(synthetic_log(-50, 50, 25))
+        self.assertTrue(analyze.analyze(self.log))
+        with (self.folder / "summary.csv").open() as file:
+            self.assertEqual(
+                [int(r["command"]) for r in csv.DictReader(file)], [-50, -25, 0, 25, 50]
+            )
+
+    def test_steps_must_match_range(self):
+        self.log.write_text(synthetic_log().replace("steps=21", "steps=20"))
+        with self.assertRaisesRegex(ValueError, "steps"):
+            analyze.analyze(self.log)
 
     def test_counter_wrap_in_both_directions(self):
         self.assertEqual(analyze.delta(2147483647, -2147483648), 1)
@@ -117,7 +142,11 @@ class E2Tests(unittest.TestCase):
         self.assertTrue((self.folder / "samples.csv").exists())
 
     def test_missing_end_is_not_complete(self):
-        self.log.write_text(synthetic_log().replace("# END reason=complete", "# LOST_END reason=complete"))
+        self.log.write_text(
+            synthetic_log().replace(
+                "# END reason=complete", "# LOST_END reason=complete"
+            )
+        )
         self.assertFalse(analyze.analyze(self.log))
 
     def test_missing_sample_row_count_is_degraded(self):
@@ -143,12 +172,34 @@ class E2Tests(unittest.TestCase):
     def test_capture_ctrl_c_still_cancels_and_closes(self):
         self.capture_test(True)
 
+    def test_capture_sends_range(self):
+        folder = self.folder / "capture"
+        port, clock = Port(False), Clock()
+        with patch("serial.Serial", return_value=port), patch.object(
+            capture.time, "monotonic", clock.monotonic
+        ), patch(
+            "sys.argv",
+            [
+                "capture.py",
+                "--port",
+                "FAKE",
+                "--out",
+                str(folder),
+                "--range",
+                "-50",
+                "50",
+                "10",
+            ],
+        ):
+            capture.main()
+        self.assertIn(b"start -50 50 10\n", port.commands)
+
     def capture_test(self, failure):
         folder = self.folder / "capture"
         port, clock = Port(failure), Clock()
-        with patch("serial.Serial", return_value=port) as factory, \
-                patch.object(capture.time, "monotonic", clock.monotonic), \
-                patch("sys.argv", ["capture.py", "--port", "FAKE", "--out", str(folder)]):
+        with patch("serial.Serial", return_value=port) as factory, patch.object(
+            capture.time, "monotonic", clock.monotonic
+        ), patch("sys.argv", ["capture.py", "--port", "FAKE", "--out", str(folder)]):
             result = capture.main()
         self.assertIsNone(factory.call_args.kwargs["port"])
         self.assertEqual(port.commands[-1], b"!\n")

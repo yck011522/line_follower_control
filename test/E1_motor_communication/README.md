@@ -1,6 +1,6 @@
 # E1 — Interactive motor tester
 
-One firmware upload supports all initial checks. Firmware: [main.cpp](../../src/e1_motor_communication/main.cpp); reusable interface: [MotorDriver](../../lib/MotorDriver/include/MotorDriver.h). No automated Python runner or serial-data parser is implemented. Initial captures use a plain serial connection.
+One firmware upload supports all initial checks. Committed findings: [results.md](results.md). Firmware: [main.cpp](../../src/e1_motor_communication/main.cpp); reusable interface: [MotorDriver](../../lib/MotorDriver/include/MotorDriver.h). No automated Python runner or serial-data parser is implemented. Initial captures use a plain serial connection.
 
 The first communication/manual/pulse checks are in [initial results](INITIAL_RESULTS.md). The current five-second both-motor runs at 100/400 kHz are in [longer-run results](LONG_RUN_RESULTS.md). Both clocks worked, but the strict zero-speed stop criterion failed due to small encoder oscillations; zero-PWM release settled the outputs.
 

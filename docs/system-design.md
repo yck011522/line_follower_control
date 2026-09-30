@@ -19,7 +19,7 @@ Each robot:
 
 The motor driver owns low-level encoder feedback and motor speed PID control. Robot firmware supplies wheel-speed targets and reads available driver telemetry, including battery voltage. Host responsibilities include world-state generation and robot monitoring. The location and distribution of the NFC meaning dictionary remain to be decided.
 
-The current motor baseline is [type 1, dead zone 1650, pulse line 2000, ratio 23,
+The current motor baseline is [type 1, dead zone 1650, pulse line 500, ratio 23,
 diameter 65 mm, PID 3/0.375/0.5](motor-settings.md). On ESP32 boot, rewrite the
 five I2C-accessible settings, require acknowledgments, and keep motion disabled
 until initialization succeeds. Rely on saved driver PID; it cannot be verified or

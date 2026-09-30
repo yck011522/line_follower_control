@@ -48,7 +48,7 @@ Motor I²C default is now **400 kHz**, based on E1 bench measurements. E1 retain
 
 ## Adopted motor settings (E0 -> E2)
 
-Use type 1, dead zone 1650, pulse line 2000, pulse phase/gear ratio 23 and wheel
+Use type 1, dead zone 1650, pulse line 500, pulse phase/gear ratio 23 and wheel
 diameter 65 mm. E2 reapplies these five settings over I2C at every ESP32 boot.
 PID **3/0.375/0.5** remains in driver flash; E2 relies on persistence and has no
 motor UART connection. See [motor settings and evidence](motor-settings.md).

@@ -10,17 +10,19 @@ namespace
 {
   MotorDriver driver(Wire);
   // Each target starts from zero: baseline 1 s, settling 1 s, measurement 2 s,
-  // then rest at zero 1 s. Total: 21 targets x 5 seconds = 105 seconds.
-  constexpr int16_t kMin = -100, kMax = 100, kIncrement = 10;
+  // then rest at zero 1 s, so each target takes 5 s.
+  constexpr int16_t kDefaultMin = -100, kDefaultMax = 100, kDefaultInc = 10;
+  constexpr int16_t kSpeedLimit = 1000; // Driver speed range is +-1000; larger values are silently ignored.
+  constexpr uint32_t kMaxSteps = 200;
   constexpr uint32_t kTickMs = 20, kBaselineMs = 1000, kSettleMs = 1000;
   constexpr uint32_t kMeasureMs = 2000, kRestMs = 1000;
   constexpr uint32_t kTrialMs = kBaselineMs + kSettleMs + kMeasureMs + kRestMs;
-  constexpr uint32_t kSteps = (kMax - kMin) / kIncrement + 1;
-  constexpr uint32_t kDeadlineMs = kSteps * kTrialMs + 5000;
+  int16_t sweepMin = kDefaultMin, sweepMax = kDefaultMax, sweepInc = kDefaultInc;
+  uint32_t deadlineMs = 0;
   bool configured = false, running = false;
   uint32_t sweepStart = 0, stepStart = 0, nextTick = 0;
   uint32_t rows = 0, dropped = 0, missed = 0, errors = 0;
-  int16_t target = kMin;
+  int16_t target = kDefaultMin;
   uint8_t step = 0;
   char input[32];
   size_t used = 0;
@@ -52,9 +54,10 @@ namespace
 
   bool settings()
   {
-    return output("# SETTINGS type=%u deadzone=%u lines=%u ratio=%u diameter_mm=%.1f pid=3,0.375,0.5 pid_source=stored_unverified\n",
+    return output("# SETTINGS type=%u deadzone=%u lines=%u ratio=%u diameter_mm=%.1f pid=%g,%g,%g pid_source=stored_unverified\n",
                   MotorSettings::type, MotorSettings::deadZone, MotorSettings::pulseLine,
-                  MotorSettings::pulsePhase, MotorSettings::diameterMm);
+                  MotorSettings::pulsePhase, MotorSettings::diameterMm,
+                  MotorSettings::storedP, MotorSettings::storedI, MotorSettings::storedD);
   }
 
   void finish(const char *reason)
@@ -75,38 +78,9 @@ namespace
 
   void configure()
   {
-    // Rewrite five settings on boot. Retain saved PID: no documented I2C access.
-    configured = false;
-    bool ok = driver.release();
-    if (ok)
-    {
-      ok = driver.setType(MotorSettings::type);
-      delay(100);
-    }
-    if (ok)
-    {
-      ok = driver.setParameter(0x02, MotorSettings::deadZone, false);
-      delay(100);
-    }
-    if (ok)
-    {
-      ok = driver.setParameter(0x03, MotorSettings::pulseLine, false);
-      delay(100);
-    }
-    if (ok)
-    {
-      ok = driver.setParameter(0x04, MotorSettings::pulsePhase, false);
-      delay(100);
-    }
-    if (ok)
-    {
-      ok = driver.setDiameter(MotorSettings::diameterMm);
-      delay(100);
-    }
-    const uint8_t error = driver.error();
-    const bool released = driver.release();
-    configured = ok && released;
-    output("# CONFIG ack_all=%u error=%u pid_source=stored_unverified\n", configured, error);
+    // Retain saved PID: no documented I2C access.
+    configured = driver.applySettings();
+    output("# CONFIG ack_all=%u error=%u pid_source=stored_unverified\n", configured, driver.error());
     settings();
   }
 
@@ -141,10 +115,10 @@ namespace
     }
     if (!strcmp(cmd, "help"))
     {
-      output("# E2: start | stop | ! | status | config | help. Fixed -100..100 step 10, M2/M4 together.\n");
+      output("# E2: start [min max inc] | stop | ! | status | config | help. Default -100 100 10, M2/M4 together.\n");
       return;
     }
-    if (strcmp(cmd, "start"))
+    if (strncmp(cmd, "start", 5) || (cmd[5] != '\0' && cmd[5] != ' '))
     {
       output("# REFUSED unknown_command\n");
       return;
@@ -154,15 +128,35 @@ namespace
       output("# REFUSED configuration_failed\n");
       return;
     }
+    // "start" alone uses the defaults; otherwise all three of min, max and inc are required.
+    int lo = kDefaultMin, hi = kDefaultMax, inc = kDefaultInc;
+    if (cmd[5] != '\0' && sscanf(cmd + 5, "%d %d %d", &lo, &hi, &inc) != 3)
+    {
+      output("# REFUSED usage: start [min max inc]\n");
+      return;
+    }
+    if (inc <= 0 || lo > hi || lo < -kSpeedLimit || hi > kSpeedLimit ||
+        static_cast<uint32_t>((hi - lo) / inc + 1) > kMaxSteps)
+    {
+      output("# REFUSED bad_range limit=%d max_steps=%lu\n", kSpeedLimit, (unsigned long)kMaxSteps);
+      return;
+    }
+    sweepMin = lo;
+    sweepMax = hi;
+    sweepInc = inc;
+    const uint32_t steps = (hi - lo) / inc + 1;
+    deadlineMs = steps * kTrialMs + 5000;
     rows = dropped = missed = errors = 0;
-    target = kMin;
+    target = sweepMin;
     step = 0;
     // These three records together exceed the native USB TX buffer. Pace them
     // before starting the motion timer, and refuse motion if any cannot be queued.
     if (!settings())
       return;
     delay(10);
-    if (!output("# START schema=2 mode=speed clock_hz=400000 min=-100 max=100 inc=10 steps=21 baseline_ms=1000 settle_ms=1000 measure_ms=2000 rest_ms=1000\n"))
+    if (!output("# START schema=2 mode=speed clock_hz=400000 min=%d max=%d inc=%d steps=%lu baseline_ms=%lu settle_ms=%lu measure_ms=%lu rest_ms=%lu\n",
+                sweepMin, sweepMax, sweepInc, (unsigned long)steps, (unsigned long)kBaselineMs,
+                (unsigned long)kSettleMs, (unsigned long)kMeasureMs, (unsigned long)kRestMs))
       return;
     delay(10);
     if (!output("step,command,phase,step_ms,t2_us,m2_count,t4_us,m4_count,m2_recent,m4_recent,write_us,read_us,applied\n"))
@@ -187,16 +181,16 @@ namespace
       return;
     }
     const uint32_t writeUs = micros() - begin;
-    uint16_t r2, r4;
-    uint32_t c2, c4;
-    if (!driver.readWord(0x11, r2) || !driver.readWord(0x13, r4) || !driver.readCumulative(0x22, c2))
+    int16_t recent2, recent4;
+    int32_t c2, c4;
+    if (!driver.readRecent(2, recent2) || !driver.readRecent(4, recent4) || !driver.readTotal(2, c2))
     {
       ++errors;
       finish("read_error");
       return;
     }
     const uint32_t t2 = micros();
-    if (!driver.readCumulative(0x26, c4))
+    if (!driver.readTotal(4, c4))
     {
       ++errors;
       finish("read_error");
@@ -207,9 +201,8 @@ namespace
     // Raw counts and separate read timestamps allow signed velocity calculations,
     // including counter/timer wraparound, without assuming encoder scaling here.
     output("%u,%d,%s,%lu,%lu,%ld,%lu,%ld,%d,%d,%lu,%lu,%d\n", step, target, phase,
-           (unsigned long)elapsed, (unsigned long)t2, (long)static_cast<int32_t>(c2),
-           (unsigned long)t4, (long)static_cast<int32_t>(c4), static_cast<int16_t>(r2),
-           static_cast<int16_t>(r4), (unsigned long)writeUs,
+           (unsigned long)elapsed, (unsigned long)t2, (long)c2,
+           (unsigned long)t4, (long)c4, recent2, recent4, (unsigned long)writeUs,
            (unsigned long)(t4 - begin - writeUs), applied);
   }
 } // namespace
@@ -219,7 +212,7 @@ void setup()
   Serial.begin(115200); // PC <-> ESP32 only; no motor-driver UART.
   Serial.setTxTimeoutMs(0);
   Wire.begin(D4, D5, 400000);
-  Wire.setTimeOut(5);
+  Wire.setTimeOut(2);
   delay(500);
   configure();
 }
@@ -258,17 +251,17 @@ void loop()
   }
   if (running)
   {
-    if (millis() - sweepStart >= kDeadlineMs)
+    if (millis() - sweepStart >= deadlineMs)
       finish("overall_timeout");
     else
     {
       if (millis() - stepStart >= kTrialMs)
       {
-        if (target >= kMax)
+        if (target + sweepInc > sweepMax)
           finish("complete");
         else
         {
-          target += kIncrement;
+          target += sweepInc;
           ++step;
           stepStart = nextTick = millis();
         }

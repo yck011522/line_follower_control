@@ -1,5 +1,7 @@
 # E0 - Motor PID tuning over direct USB
 
+Committed findings and plots: [results.md](results.md).
+
 This precedes E1 communication and E2 speed sweeps. Connect the motor driver
 directly to the PC (currently **COM5**) with the ESP32 disconnected. No firmware
 build/upload is needed. Protocol source: [Motor Driver Serial Commands.pdf](../../reference/Motor%20Driver%20Serial%20Commands.pdf).

@@ -2,6 +2,7 @@
 
 This never connects to the motor driver's UART and has no motor tuning options.
 """
+
 import argparse
 import json
 import re
@@ -14,9 +15,17 @@ HERE = Path(__file__).resolve().parent
 
 def open_esp32(name):
     import serial
+
     # Set lines while CLOSED: rtscts=False alone does not turn RTS off.
-    port = serial.Serial(port=None, baudrate=115200, timeout=0.05,
-                         write_timeout=1, rtscts=False, dsrdtr=False, xonxoff=False)
+    port = serial.Serial(
+        port=None,
+        baudrate=115200,
+        timeout=0.05,
+        write_timeout=1,
+        rtscts=False,
+        dsrdtr=False,
+        xonxoff=False,
+    )
     port.dtr, port.rts = True, False
     port.port = name
     try:
@@ -29,6 +38,7 @@ def open_esp32(name):
 
 class Lines:
     """Keep incomplete lines across reads and handshake/capture boundaries."""
+
     def __init__(self, port):
         self.port, self.buffer = port, b""
 
@@ -67,22 +77,46 @@ def handshake(port, reader, log):
             if match[2] == "1":
                 send(port, "!")
             elif not retried_config:
-                send(port, "config")  # Retry the same fixed configuration, never tune it.
+                send(
+                    port, "config"
+                )  # Retry the same fixed configuration, never tune it.
                 retried_config = True
-    raise RuntimeError("No idle/configured E2 schema=2 status; check firmware, driver power and I2C")
+    raise RuntimeError(
+        "No idle/configured E2 schema=2 status; check firmware, driver power and I2C"
+    )
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--port", default="COM4", help="ESP32 USB port, not direct motor-driver USB")
+    parser.add_argument(
+        "--port", default="COM4", help="ESP32 USB port, not direct motor-driver USB"
+    )
     parser.add_argument("--out", type=Path)
+    parser.add_argument(
+        "--range",
+        nargs=3,
+        type=int,
+        metavar=("MIN", "MAX", "INC"),
+        help="sweep range; the firmware default is -100 100 10",
+    )
     args = parser.parse_args()
-    folder = args.out or HERE / "results" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
+    folder = args.out or HERE / "results" / datetime.now(timezone.utc).strftime(
+        "%Y%m%dT%H%M%S_%fZ"
+    )
     folder.mkdir(parents=True, exist_ok=False)
-    meta = dict(started_utc=datetime.now(timezone.utc).isoformat(), port=args.port,
-                environment="e2_motor_speed", schema=2, status="incomplete",
-                dtr=True, rts=False, baud=115200, pid_assumed=[3, 0.375, 0.5],
-                pid_source="driver_flash_not_verified_over_i2c", cleanup_errors=[])
+    meta = dict(
+        started_utc=datetime.now(timezone.utc).isoformat(),
+        port=args.port,
+        environment="e2_motor_speed",
+        schema=2,
+        status="incomplete",
+        dtr=True,
+        rts=False,
+        baud=115200,
+        pid_assumed=[3, 0.375, 0.5],
+        pid_source="driver_flash_not_verified_over_i2c",
+        cleanup_errors=[],
+    )
     port = reader = None
     started = ended = False
     with (folder / "serial.log").open("w", encoding="utf-8", buffering=1) as log:
@@ -90,7 +124,9 @@ def main():
             port = open_esp32(args.port)
             reader = Lines(port)
             handshake(port, reader, log)
-            send(port, "start")
+            send(
+                port, "start" + (" %d %d %d" % tuple(args.range) if args.range else "")
+            )
             deadline = time.monotonic() + 120
             last_rx = time.monotonic()
             while not ended and time.monotonic() < deadline:
@@ -131,6 +167,7 @@ def main():
         try:
             from analyze import analyze
             from plot import plot_run
+
             if analyze(folder / "serial.log") and not meta["cleanup_errors"]:
                 meta["status"] = "complete"
             plot_run(folder)

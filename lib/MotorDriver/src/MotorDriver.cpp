@@ -1,4 +1,5 @@
 #include "MotorDriver.h"
+#include "MotorSettings.h"
 #include <cstring>
 
 // Address-only transmission: returns 0 if the driver acknowledges its I2C address.
@@ -43,6 +44,15 @@ bool MotorDriver::readWord(uint8_t reg, uint16_t &value)
 }
 
 // Reads a 32-bit encoder total stored as two 16-bit registers (high word at highReg, low word at highReg + 1).
+//
+// Implementation: each attempt reads high, low, then high again (three separate readWord transactions).
+// If the two high reads match, the low word cannot have rolled over in between, so the pair is coherent.
+// If they differ, the whole sequence is retried once; after two failed attempts error() is 0x81.
+//
+// WARNING - COSTLY: about 3 x 176 us = roughly 0.53 ms of blocking I2C time per motor at 400 kHz
+// (176 us per word, measured on the bench). Reading two motors' totals is about 1.05 ms, and the E2 test's
+// full 50 Hz tick (two totals, two recent counts and one speed write) costs roughly 1.7 ms of every 20 ms.
+// Keep this out of high-rate control loops; use it only for measurement and calibration.
 bool MotorDriver::readCumulative(uint8_t highReg, uint32_t &value)
 {
   // Bounded high-low-high read avoids mixing words across a low-word rollover.
@@ -63,28 +73,22 @@ bool MotorDriver::readCumulative(uint8_t highReg, uint32_t &value)
   return false;
 }
 
-// Closed-loop speed targets (register 0x06, documented range -1000..1000, not checked here).
-// The frame is four big-endian int16 values M1..M4; M1 and M3 are sent as 0.
-bool MotorDriver::setSpeeds(int16_t m2, int16_t m4)
+// Sends one four-motor frame of big-endian int16 values M1..M4; M1 and M3 are sent as 0.
+bool MotorDriver::writeMotors(uint8_t reg, int16_t m2, int16_t m4)
 {
   const uint16_t a = static_cast<uint16_t>(m2);
   const uint16_t b = static_cast<uint16_t>(m4);
   const uint8_t bytes[] = {0, 0, static_cast<uint8_t>(a >> 8),
                            static_cast<uint8_t>(a), 0, 0,
                            static_cast<uint8_t>(b >> 8), static_cast<uint8_t>(b)};
-  return write(0x06, bytes, sizeof(bytes));
+  return write(reg, bytes, sizeof(bytes));
 }
 
-// Open-loop PWM (register 0x07, documented range -3600..3600, not checked here). Same frame layout as setSpeeds.
-bool MotorDriver::setPwm(int16_t m2, int16_t m4)
-{
-  const uint16_t a = static_cast<uint16_t>(m2);
-  const uint16_t b = static_cast<uint16_t>(m4);
-  const uint8_t bytes[] = {0, 0, static_cast<uint8_t>(a >> 8),
-                           static_cast<uint8_t>(a), 0, 0,
-                           static_cast<uint8_t>(b >> 8), static_cast<uint8_t>(b)};
-  return write(0x07, bytes, sizeof(bytes));
-}
+// Closed-loop speed targets (register 0x06, documented range -1000..1000, not checked here).
+bool MotorDriver::setSpeeds(int16_t m2, int16_t m4) { return writeMotors(0x06, m2, m4); }
+
+// Open-loop PWM (register 0x07, documented range -3600..3600, not checked here).
+bool MotorDriver::setPwm(int16_t m2, int16_t m4) { return writeMotors(0x07, m2, m4); }
 
 // Sets all four PWM outputs to 0 so the wheels can turn freely (speed 0 would keep the PID holding them).
 bool MotorDriver::release()
@@ -118,4 +122,64 @@ bool MotorDriver::setDiameter(float mm)
   const uint8_t bytes[] = {static_cast<uint8_t>(bits), static_cast<uint8_t>(bits >> 8),
                            static_cast<uint8_t>(bits >> 16), static_cast<uint8_t>(bits >> 24)};
   return write(0x05, bytes, sizeof(bytes));
+}
+
+// Boot configuration from MotorSettings.h. The driver needs time to save each value, hence the delays.
+bool MotorDriver::applySettings()
+{
+  bool ok = release();
+  if (ok)
+  {
+    ok = setType(MotorSettings::type);
+    delay(100);
+  }
+  if (ok)
+  {
+    ok = setParameter(0x02, MotorSettings::deadZone, false);
+    delay(100);
+  }
+  if (ok)
+  {
+    ok = setParameter(0x03, MotorSettings::pulseLine, false);
+    delay(100);
+  }
+  if (ok)
+  {
+    ok = setParameter(0x04, MotorSettings::pulsePhase, false);
+    delay(100);
+  }
+  if (ok)
+  {
+    ok = setDiameter(MotorSettings::diameterMm);
+    delay(100);
+  }
+  const uint8_t settingsError = error_;
+  const bool released = release();
+  if (!ok)
+    error_ = settingsError; // Keep the first failure's code rather than the cleanup's.
+  return ok && released;
+}
+
+// Recent-count registers are 0x10..0x13 for M1..M4.
+bool MotorDriver::readRecent(uint8_t motor, int16_t &counts)
+{
+  if (motor < 1 || motor > 4)
+    return false;
+  uint16_t raw;
+  if (!readWord(0x10 + motor - 1, raw))
+    return false;
+  counts = static_cast<int16_t>(raw);
+  return true;
+}
+
+// Total-count registers are 0x20/0x21 (M1), 0x22/0x23 (M2), 0x24/0x25 (M3), 0x26/0x27 (M4).
+bool MotorDriver::readTotal(uint8_t motor, int32_t &counts)
+{
+  if (motor < 1 || motor > 4)
+    return false;
+  uint32_t raw;
+  if (!readCumulative(0x20 + 2 * (motor - 1), raw))
+    return false;
+  counts = static_cast<int32_t>(raw);
+  return true;
 }

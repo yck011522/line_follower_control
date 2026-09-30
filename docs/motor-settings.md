@@ -9,13 +9,15 @@ by the user. E2 uses I2C only and does not send motor-driver serial commands.
 | --- | --- | --- |
 | Motor type | 1 | `$mtype:1#` / `Motor_type` |
 | PWM dead zone | 1650 | `$deadzone:1650#` / `Dead_Zone` |
-| Pulse line | 2000 | `$mline:2000#` / `Pulse_Line` |
+| Pulse line | 500 | `$mline:500#` / `Pulse_Line` |
 | Pulse phase (gear ratio) | 23 | `$mphase:23#` / `Pulse_Phase` |
 | Wheel diameter | 65 mm | `$wdiameter:65#` / `wheel_diameter` |
 | Speed PID | P=3, I=0.375, D=0.5 | `$MPID:3,0.375,0.5#` / `P`, `I`, `D` |
 
-The motor's 500 ppr specification is not the driver setting: use **2000** for
-Pulse_Line. Do not multiply 2000 by another quadrature factor. Ratio 23 is the
+Pulse_Line is the encoder's **500 ppr**, not 2000. The driver applies the x4
+quadrature factor itself: E2's sweep with 2000 ran the wheel about four times
+faster than commanded, and a hand-turned wheel revolution gave 44998 counts
+(500 ppr x 4 x 22.5 gearbox). Ratio 23 is the
 selected driver setting; the motor datasheet's fractional 22.569 ratio remains
 relevant to independent odometry calibration. Diameter 65 mm is nominal.
 
@@ -62,9 +64,9 @@ commissioning tool; no UART wiring or boot-time serial configuration is added.
 
 E2 measures speed from cumulative encoder differences over actual ESP32 timestamps.
 Raw counts/s is the primary measurement. Its nominal mm/s estimate uses
-`counts/s * pi * 65 / (2000 * 23)` (46000 assumed counts/output revolution),
-without another quadrature factor. This uses the adopted configuration scale,
-not independently verified physical distance. It is not the serial `$MSPD` value.
+`counts/s * pi * 65 / 44998` (hand-measured counts per wheel revolution),
+independent of the driver's line and ratio settings. This is not independently verified physical distance.
+It is not the serial `$MSPD` value.
 
 Zero speed keeps PID active; zero PWM releases the outputs. Tests should record
 zero-speed behavior where relevant and release outputs on completion or failure.
