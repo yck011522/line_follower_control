@@ -19,7 +19,7 @@ The `test/` directory is intended for host-driven hardware experiments. If Platf
 7. Write raw captures, CSV measurements, a Markdown summary, and optional Matplotlib plots to the experiment's results directory.
 8. Stop activity and release the port on completion/interruption. E2 firmware also needs a bounded local motor run so host disconnection cannot leave a test running indefinitely.
 
-The exact serial command/record schema remains to be designed with E1. It should distinguish ready, start acknowledgment, samples, errors, and completion, and include sample indices plus device timestamps. Do not depend on arbitrary startup sleep durations alone.
+The exact serial command/record schema remains to be designed with E2, now the first experiment. It should distinguish ready, start acknowledgment, samples, errors, and completion, and include sample indices plus device timestamps. Do not depend on arbitrary startup sleep durations alone.
 
 Proposed future runner name: `run.py` in each experiment folder. No runner or command schema exists yet.
 
@@ -46,6 +46,8 @@ Use a unique directory per run; never overwrite previous evidence. Record UTC st
 - Include both successful and unsuccessful operations. NFC tag absence, read errors, and timeouts must be distinguishable.
 
 ## Experiment sequence
+
+Current order: **E2 → E1 → E3 → E4**; retain existing folder IDs. The detailed [E2 plan](../test/E2_motor_driver/PLAN.md) covers motor commissioning and matched 100/400 kHz bus tests.
 
 | Experiment | Initial scope | Evidence needed before integration |
 | --- | --- | --- |

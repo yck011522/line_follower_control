@@ -37,8 +37,8 @@ Start with the [documentation index](docs/README.md), [pin assignments](docs/har
 
 ## Current status
 
-This repository currently contains the project structure and design documentation only. No firmware, Python runners, validated hardware drivers, or performance results exist yet. `platformio.ini` will be added once the exact ESP32-S3 board and initial sensor interface are confirmed; there is no build/upload command to run yet.
+This repository contains the project structure, design documentation, and a PlatformIO configuration for the Seeed Studio XIAO ESP32S3. No firmware, Python runners, validated hardware drivers, or performance results exist yet. The configured E2 environment still needs its firmware entry point before building. See [development environment](docs/development-environment.md) for the verified PlatformIO installation and observed COM4 port.
 
-Development order: **E1 line sensor → E2 motor driver → E3 NFC reader → E4 wireless → integration**. Each future PlatformIO environment will select one application and reuse modules from `lib/`.
+Development order: **E2 motor driver → E1 line sensor → E3 NFC reader → E4 wireless → integration**. Experiment IDs remain unchanged. Each PlatformIO environment will select one application and reuse modules from `lib/`.
 
-Before implementing E1, confirm the board model, pin mapping, line-sensor model, and its I²C protocol. Remaining questions are tracked in [open questions](docs/open-questions.md).
+Start with the [E2 motor test plan](test/E2_motor_driver/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).
