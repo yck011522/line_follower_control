@@ -1,0 +1,18 @@
+# PlatformIO build state
+.pio/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local editor / OS files
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated experiment runs; retain each results directory placeholder.
+test/E*/results/*
+!test/E*/results/.gitkeep

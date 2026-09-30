@@ -1,0 +1,44 @@
+# ESP32 line-following robot controller
+
+Controller firmware and repeatable hardware experiments for four differential-drive toy cars on a reconfigurable game board. Each car uses an ESP32-S3, an eight-channel line sensor, an RC522 NFC reader, and a motor controller that handles wheel-speed regulation internally.
+
+The first development phase measures peripheral performance independently before integrating line following and wireless control. PlatformIO is the intended firmware build/upload tool; Python will automate uploads, test triggering, serial capture, and analysis on Windows.
+
+## System intent
+
+- Follow a black line on a white board initially; support the opposite polarity later.
+- Command left/right wheel speeds through the motor driver. The robot firmware implements steering control, while the motor driver handles its existing motor PID loops.
+- Accept forward/stop and left/straight/right turn indicators from a central Windows PC through a USB-connected ESP32 radio bridge. ESP-NOW is the presumed wireless transport, pending confirmation.
+- Use NFC tag UIDs to identify zones, branch entry/exit, and merge entry/exit. Latch the turn choice at the branch decision point until the branch completes.
+- Report robot identity, acknowledged world state, NFC observations, motion state, wheel speeds, line readings, battery voltage, and uptime.
+
+Initial targets are a 50 Hz internal control loop, 50 Hz world-state broadcasts, 20 Hz robot telemetry, and 100 mm/s driving speed. Experiments will determine whether 100 Hz or higher local control is practical. These are targets, not measured capabilities.
+
+## Repository layout
+
+```text
+docs/                       System requirements, interfaces, and progress
+lib/                        Reusable firmware drivers and control/protocol modules
+src/
+  e1_line_sensor/            Standalone line-sensor experiment
+  e2_motor_driver/           Standalone motor-driver experiment
+  e3_nfc_reader/             Standalone RC522 experiment
+  e4_wireless/               Robot/bridge communication experiment
+  robot/                    Future integrated robot application
+  bridge/                   Future USB radio bridge application
+test/
+  E1_line_sensor/            Future Python runner and E1 results
+  E2_motor_driver/           Future Python runner and E2 results
+  E3_nfc_reader/             Future Python runner and E3 results
+  E4_wireless/               Future Python runner and E4 results
+```
+
+Start with the [documentation index](docs/README.md), [pin assignments](docs/hardware.md), and [development progress](docs/progress.md). The [test workflow](docs/testing.md) defines the intended automation and result layout.
+
+## Current status
+
+This repository currently contains the project structure and design documentation only. No firmware, Python runners, validated hardware drivers, or performance results exist yet. `platformio.ini` will be added once the exact ESP32-S3 board and initial sensor interface are confirmed; there is no build/upload command to run yet.
+
+Development order: **E1 line sensor → E2 motor driver → E3 NFC reader → E4 wireless → integration**. Each future PlatformIO environment will select one application and reuse modules from `lib/`.
+
+Before implementing E1, confirm the board model, pin mapping, line-sensor model, and its I²C protocol. Remaining questions are tracked in [open questions](docs/open-questions.md).
