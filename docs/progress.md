@@ -10,10 +10,11 @@ Status vocabulary: **planned**, **in progress**, **blocked**, **complete**. Mark
 | PlatformIO and host-runner setup | In progress | Core 6.1.19; E1 builds/uploads on COM4; interactive serial works; automation deferred |
 | E0: motor PID | Complete for baseline selection | PID 3/0.375/0.5 adopted; [evidence](../test/E0_motor_tuning/TUNING_RESULTS.md); target 10 and loaded steering unresolved |
 | E2: low-speed mapping | In progress | Fixed I2C -100..100 sweep, boot settings, Python capture and plots; revised hardware test pending |
-| E3: line sensor | Planned | Driver, firmware, Python runner, CSV and timing summary |
+| E3: line sensor | In progress | Standalone reads and Arduino 3.3.12 timing verified; 1000 Hz repeat testing by operator |
 | E1: motor driver (first) | In progress | [Five-second runs](../test/E1_motor_communication/LONG_RUN_RESULTS.md): 100/400 kHz communication and both-motor motion verified; zero-speed hold oscillates; scaling/tuning pending |
-| E4: NFC reader | Planned | UID-only reader, present/absent timing and event behavior |
-| E5: wireless | Planned | USB bridge and radio tests, then four-robot load measurements |
+| E4: line sensor library | Complete for initial bench | One-header class; 130000/130000 reads after reader reset; 1000 us minimum spacing during retries and normal reads; [report](../test/E4_line_sensor_library/results/20261001T092116Z_repeat/README.md) |
+| E5: NFC reader | Planned | UID-only reader, present/absent timing and event behavior |
+| E6: wireless | Planned | USB bridge and radio tests, then four-robot load measurements |
 | Integrated control | Planned | Steering PID, navigation states, command handling and fault behavior |
 | Driving validation | Planned | 100 mm/s tracking on 14 mm lines and 30–50 mm turns; higher-rate/speed trials |
 

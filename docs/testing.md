@@ -4,7 +4,7 @@
 
 [E0 motor tuning](../test/E0_motor_tuning/README.md) is a host-only Python experiment connected directly to the motor driver USB port, with no ESP32 firmware or PlatformIO environment. It verifies stored configuration and PID readback, records speed steps, and plots the responses.
 
-Each subsequent experiment has firmware in `src/eN_name/` and a Python runner plus generated results in `test/EN_name/`. Shared drivers belong in `lib/`. Proposed PlatformIO environment names match firmware directory names; `robot` and `bridge` are reserved for integration. E5 may need distinct robot and bridge environments.
+Each subsequent experiment has firmware in `src/eN_name/` and a Python runner plus generated results in `test/EN_name/`. Shared drivers belong in `lib/`. Proposed PlatformIO environment names match firmware directory names; `robot` and `bridge` are reserved for integration. E6 may need distinct robot and bridge environments.
 
 Once board/framework details are known, configure each environment to compile only its intended entry point using source filters. Hardware drivers must not be copied between experiments and integration. Keep device addresses, bus objects, and pin configuration explicit at application boundaries.
 
@@ -59,7 +59,7 @@ Use a unique directory per run; never overwrite previous evidence. Record UTC st
 
 ## Experiment sequence
 
-Current order: **E0 → E1 → E2 → E3 → E4 → E5**. IDs identify experiments, not peripherals. Existing experiment folders/results were renamed to match. The [E1 plan](../test/E1_motor_communication/PLAN.md) covers motor communication; [E2](../test/E2_motor_speed/README.md) is the separate speed-command sweep. Motor I²C now defaults to 400 kHz.
+Current order: **E0 -> E1 -> E2 -> E3 -> E4 -> E5 -> E6**. E3 is the standalone line-sensor test; E4 tests its library, E5 NFC and E6 wireless. IDs identify experiments, not peripherals. Historical results remain preserved. Motor I2C defaults to 400 kHz.
 
 | Experiment | Initial scope | Evidence needed before integration |
 | --- | --- | --- |
@@ -67,7 +67,8 @@ Current order: **E0 → E1 → E2 → E3 → E4 → E5**. IDs identify experimen
 | E3 line sensor | Read all eight channels, record values and timing; compare requested rates | Correct channel order/polarity, fresh-data behavior, bus errors, latency distribution, measured sustainable rate |
 | E1 motor driver | Command bounded wheel speeds, read speed and battery telemetry where supported | Protocol/units verified; write/read durations, physical stop behavior, feedback availability |
 | E2 motor speed | I2C only; fixed -100..100 step 10; zero baseline/rest; 1 s settling + 2 s measuring | M2/M4 command-to-counts/s mapping and nominal mm/s estimate; stored PID 3/0.375/0.5 assumed, five other settings rewritten at boot |
-| E4 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
-| E5 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
+| E4 line sensor library | Repeat E3 through the shared class at 1000 Hz | Success/latency, retry behavior, reading age and minimum 1000 us request-start spacing |
+| E5 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
+| E6 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
 
 After individual tests, measure the complete control cycle under concurrent sensing, motor traffic, wireless traffic, and telemetry. Individual operation timings alone do not establish the integrated loop budget. Bench-validate motor commands with wheels clear before driving tests; confirm wheel direction and stop behavior first.

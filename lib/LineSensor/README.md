@@ -1,13 +1,34 @@
 # LineSensor
 
-Owns and automatically configures one I²C controller. Construct it inside Arduino `setup()` (for example as a function-local static), then call `tick()` from the main loop. Do not assign another owner to the same bus controller.
+One header, `LineSensor.h`, refactored from the standalone E3 direct read.
+Construct inside `setup()`: `static LineSensor sensor(D6, D7, 1000, 5);`.
+The arguments are SDA, SCL, normal poll frequency and maximum total attempts.
 
-Defaults: bus 1, SDA D6, SCL D7, address `0x12`, register `0x30`, 1 MHz bus clock, 1 ms per-Wire-operation timeout, 50 Hz polling, and five **total attempts** per due poll. Set `Config::requestHz=0` for a request on every tick. Rate and attempt limit can also be changed through setters.
+The constructor configures I2C controller 1, 1 MHz, a 1 ms requested Wire timeout,
+address 0x12 and register 0x30. Use Arduino 3.3.12 as pinned by E3/E4. The chosen
+pins must not be owned by another bus object. Use from one task.
 
-`tick()` returns immediately when not due. A due poll reads up to `maxAttempts` times and stops at the first successful one-byte response. Retries are synchronous, so several timed-out requests can delay the caller; this is not an asynchronous driver. The 1 ms Wire timeout is a requested setting, not a guaranteed latency bound: hardware failures during verification took about one second per physical request. Thus an exhausted five-attempt poll can take seconds. Expired polling slots are skipped rather than serviced in a catch-up burst. No serial messages are printed by the class. Disable Arduino core logging in the application's build flags, as E3 does, to suppress Wire diagnostics too.
+`tick()` returns `Status::Idle`, `Success` or `Failure`. It makes at most one
+physical request per call. Requests and retries start at least 1000 us apart.
+Rate 0 means the 1000 Hz maximum; values above 1000 are capped. Other rates use
+an integer period rounded up. Polls anchor to actual starts; there is no catch-up.
+Five attempts means the first request plus up to four retries. Retries are
+serviced by subsequent ticks, without sleeping in the library. Slow caller ticks
+reduce the actual rate and delay retries. Each I2C transaction remains blocking.
+After a batch succeeds or exhausts its attempts, the next normal poll resumes
+when both its normal period and the 1 ms request spacing allow it.
 
-`reading()` returns `valid`, `rawMask`, `receivedAtUs`, and dynamically calculated `ageUs`. Before the first successful read, `valid=false` and `ageUs=UINT64_MAX`; inspect `valid` before using the mask. Failure leaves the previous mask/timestamp intact. Repeated successful reads refresh the timestamp even if the byte is unchanged. This age measures time since successful communication, not the sensor's internal conversion age. Callers choose their own stale-data threshold.
+`reading()` returns `valid`, the original active-low `rawMask`, and dynamically
+calculated `ageUs`. Before success, valid=false and ageUs=UINT64_MAX. Failed
+requests retain the previous byte and timestamp. Age means time since successful
+communication, not the sensor's internal conversion age. Bit 7 is X1, bit 0 X8;
+zero denotes black. Filtering and edge/center estimation are deferred.
 
-The manufacturer example implies bit 7=X1 through bit 0=X8 and active-low on black. `Reading::blackMask()` inverts the raw bits. Spatial filtering, center/edge estimation, and line-polarity configuration are deferred.
+`ready()` reports successful bus initialization. `lastRequest()` supplies
+`startedAtUs`, `durationUs`, `transmitError` and the one-based attempt number for
+benchmarking. Inspect it only when tick returns Success or Failure.
 
-`TickResult` supplies quiet per-poll timing, retry, error, and missed-slot information for experiments. A recovered poll can be successful even though some physical requests failed. Use from one task; bus/state access is not synchronized for concurrent callers.
+The class does not print serial messages or automatically reset/recover hardware.
+The application's CORE_DEBUG_LEVEL=0 flag silences Arduino Wire diagnostics.
+E4 uses the same settings and physical-request statistics as E3, with retry
+counts, current reading age and minimum request-start gap added.

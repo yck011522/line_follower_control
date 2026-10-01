@@ -12,32 +12,35 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e3_line_sensor/firmware.elf",
-            "projectEnvName": "e3_line_sensor",
-            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp32s3/bin",
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
+            "projectEnvName": "e2_motor_speed",
+            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
+            "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd",
             "preLaunchTask": {
                 "type": "PlatformIO",
-                "task": "Pre-Debug (e3_line_sensor)"
+                "task": "Pre-Debug (e2_motor_speed)"
             }
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e3_line_sensor/firmware.elf",
-            "projectEnvName": "e3_line_sensor",
-            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp32s3/bin",
-            "internalConsoleOptions": "openOnSessionStart"
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
+            "projectEnvName": "e2_motor_speed",
+            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
+            "internalConsoleOptions": "openOnSessionStart",
+            "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e3_line_sensor/firmware.elf",
-            "projectEnvName": "e3_line_sensor",
-            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp32s3/bin",
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
+            "projectEnvName": "e2_motor_speed",
+            "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
+            "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd",
             "loadMode": "manual"
         }
     ]
