@@ -104,12 +104,3 @@ Calibrate one known wheel revolution before treating these values as odometry.
 
 Earlier E2 logs, including wider sweeps and PWM investigations, remain historical
 artifacts. The current analyzer expects schema=2 and does not relabel old results.
-
-## Verification
-
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s test/E2_motor_speed -p "test_*.py"
-```
-
-The revised firmware must still be validated on the connected ESP32 and motor
-board. Synthetic tests establish software handling, not new hardware measurements.

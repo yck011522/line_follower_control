@@ -132,11 +132,3 @@ Compare saved runs with a shared vertical scale for the 20-speed plots:
 This writes `comparison.csv`, `comparison.md`, and `low_speed_comparison.png`.
 RMSE includes both average tracking error and variation; rest RMS measures
 residual motion feedback during the final second after commanding zero.
-
-## Software verification
-
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s test/E0_motor_tuning -p "test_*.py"
-```
-
-These simulated serial tests do not move hardware or validate physical tuning.

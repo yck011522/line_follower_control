@@ -1,5 +1,12 @@
 # Project working conventions
 
+- Do not add host-side unit tests, mock hardware headers, or simulated-device
+  test harnesses unless the user explicitly requests them. Use firmware builds
+  and direct hardware experiments for verification.
+
+- All new C++ files must have human-readable comments before every function and
+  at critical points within functions, explaining purpose, timing, and non-obvious behavior.
+
 - Read `docs/motor-settings.md` before changing motor configuration or experiments.
   The adopted baseline is type 1, dead zone 1650, pulse line 500, pulse phase
   (gear ratio) 23, wheel diameter 65 mm, PID P=3/I=0.375/D=0.5.
