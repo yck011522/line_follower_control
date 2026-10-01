@@ -42,7 +42,7 @@ Start with the [documentation index](docs/README.md), [pin assignments](docs/har
 
 ## Current status
 
-The interactive E1 motor tester builds and uploads to the Seeed Studio XIAO ESP32S3. One firmware automatically configures the driver at startup and supports 100/400 kHz I²C checks, manual encoder observation, and five-second M2/M4 or both-motor runs through serial commands. See the [operator guide](test/E1_motor_communication/README.md). E0 has recorded tuning results. E2 has a Python capture/analysis runner; the revised E2 firmware awaits hardware validation. Integrated robot firmware remains future work.
+E1 is archived with its source and historical measurements preserved. E2 is the active motor experiment and uses the simplified [MotorDriver library](lib/MotorDriver/README.md). E3 preserves the standalone line-sensor benchmark; E4 exercises its library. Integrated robot firmware remains future work.
 
 Experiments are numbered by test: **E0 Motor PID Tuning -> E1 Motor Driver Communication -> E2 Motor Speed Command -> E3 standalone line sensor -> E4 line sensor library -> E5 NFC reader -> E6 wireless -> integration**. Historical measurement values remain unchanged. Each PlatformIO environment selects one application and reuses modules from `lib/`.
 

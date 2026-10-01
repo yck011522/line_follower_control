@@ -1,6 +1,6 @@
 ﻿# E2 - Parametric low-speed I2C sweep
 
-[main.cpp](main.cpp) uses the shared MotorDriver register interface and
+[main.cpp](main.cpp) uses the shared [MotorDriver library](../../lib/MotorDriver/README.md) and
 [MotorSettings.h](../../lib/MotorDriver/include/MotorSettings.h). No motor UART
 is used. Boot rewrites five I2C settings; PID 3/0.375/0.5 is assumed in driver flash.
 
@@ -10,3 +10,8 @@ encoder counts and actual timestamps. No automatic motion at boot, no runtime tu
 
 See the [E2 operator guide](../../test/E2_motor_speed/README.md) and
 [project motor settings](../../docs/motor-settings.md).
+
+The firmware calls `initialize()` after starting I2C and permits motion only
+after successful configuration. Commands use `setWheelSpeedsMmPerSecond()`;
+shutdown uses zero speed followed by `releaseMotorOutputs()`. Explicit raw
+encoder reads preserve the existing CSV schema and analysis.

@@ -1,3 +1,5 @@
+> Archived: source and historical results are preserved. The old API and byte-order diagnostics are no longer maintained; E1 has no active build environment. Use E2 for motor testing.
+
 # E1 — Interactive motor tester
 
 One firmware upload supports all initial checks. Committed findings: [results.md](results.md). Firmware: [main.cpp](../../src/e1_motor_communication/main.cpp); reusable interface: [MotorDriver](../../lib/MotorDriver/include/MotorDriver.h). No automated Python runner or serial-data parser is implemented. Initial captures use a plain serial connection.

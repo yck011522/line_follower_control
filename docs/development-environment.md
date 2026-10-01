@@ -8,7 +8,7 @@
 - `platformio device list --json-output` detected exactly one serial device: **COM4**, `USB Serial Device (COM4)`, USB VID:PID **303A:1001**.
 - Initial discovery only enumerated the device. Subsequent E1 commissioning built/uploaded firmware and verified serial plus motor-driver communication; see [bench results](../test/E1_motor_communication/INITIAL_RESULTS.md).
 
-The root `platformio.ini` has separate E1 (`e1_motor_communication`) and E2 (`e2_motor_speed`) environments, with E2 selected by default. Each source filter excludes other applications. Both use the XIAO board, Arduino, and the installed platform version. Monitor DTR/RTS are disabled; the upload tool still resets the board as required for flashing.
+The root `platformio.ini` selects E2 by default and provides E2?E4 environments. E1 is archived without an active build environment. Each source filter excludes other applications. All active environments use the pinned pioarduino platform below. Monitor DTR is on and RTS is off; flashing/reset remains a separate workflow.
 
 The board ID is also listed in [PlatformIO's board documentation](https://docs.platformio.org/en/latest/boards/espressif32/seeed_xiao_esp32s3.html). Pin aliases must be taken from the [Seeed board reference](https://wiki.seeedstudio.com/xiao_esp32s3_getting_started/), not inferred from their label numbers.
 
@@ -25,7 +25,7 @@ The installed `espressif32/boards/seeed_xiao_esp32s3.json` selects Arduino varia
 
 Use these aliases after including `Arduino.h`. The motor bus uses `Wire.begin(D4, D5, 400000)`; the second bus must explicitly select D6/D7. Bare integer pin arguments represent GPIO numbers, not D-label indices. Board selection supplies the mappings; it does not reinterpret a bare `4` as `D4`.
 
-The environment name `[env:e1_motor_communication]` is an application label. `board = seeed_xiao_esp32s3` selects the hardware regardless of that environment name. `platform = espressif32@6.12.0` pins the installed Espressif32 version for repeatability. No custom pin-mapping header is needed.
+Environment names select applications; `board = seeed_xiao_esp32s3` selects hardware. No custom pin-mapping header is needed.
 
 ## Read-only discovery commands
 
@@ -57,12 +57,7 @@ separate from these test-port rules. See [motor settings](motor-settings.md).
 
 ## E3 Arduino 3.3.12 migration (2026-10-01)
 
-Only `e3_line_sensor` overrides the shared platform with the pinned pioarduino
-`55.03.312-1` release URL in `platformio.ini`. It packages Espressif's official
-Arduino 3.3.12 release and ESP-IDF 5.5.5. The integration is community maintained.
-E1 and E2 still select `espressif32@6.12.0`. Board aliases and native USB CDC
-settings were checked against the new installed XIAO definition: D6=GPIO43,
-D7=GPIO44, USB mode 1, CDC enabled on boot.
+All active environments now use the shared pinned pioarduino `55.03.312-1` URL in `platformio.ini`, packaging Arduino 3.3.12 and ESP-IDF 5.5.5. This integration is community maintained. The installed XIAO definition retains D6=GPIO43, D7=GPIO44, USB mode 1, and CDC enabled on boot.
 
 The first installation needs large SDK/toolchain downloads. Its initial Python
 `uv` setup failed; verifying/installing `uv` with the PlatformIO penv Python and

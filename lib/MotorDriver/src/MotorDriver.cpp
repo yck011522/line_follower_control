@@ -2,184 +2,174 @@
 #include "MotorSettings.h"
 #include <cstring>
 
-// Address-only transmission: returns 0 if the driver acknowledges its I2C address.
-uint8_t MotorDriver::probe()
+// Send [register][payload...] as one transaction to the motor board.
+bool MotorDriver::writeRegisterBytes(uint8_t registerAddress, const uint8_t *payload, size_t payloadSize)
 {
-  bus_.beginTransmission(kAddress);
-  error_ = bus_.endTransmission();
-  return error_;
+  bus_.beginTransmission(kI2cAddress);
+  bus_.write(registerAddress);
+  bus_.write(payload, payloadSize);
+  communicationError_ = bus_.endTransmission();
+  return communicationError_ == 0;
 }
 
-// Sends [register][data...] in one I2C transaction; every driver write uses this.
-bool MotorDriver::write(uint8_t reg, const uint8_t *data, size_t size)
+// Select one register and decode its two-byte value. Bench reads require a
+// repeated START: inserting a STOP before requestFrom() returned zero values.
+bool MotorDriver::readRegister16BigEndian(uint8_t registerAddress, uint16_t &value)
 {
-  bus_.beginTransmission(kAddress);
-  bus_.write(reg);
-  bus_.write(data, size);
-  error_ = bus_.endTransmission();
-  return error_ == 0;
-}
-
-// Reads one big-endian 16-bit register. Sends the register address, then requests 2 bytes.
-bool MotorDriver::readWord(uint8_t reg, uint16_t &value)
-{
-  bus_.beginTransmission(kAddress);
-  bus_.write(reg);
-  // With repeatedStart_ the STOP is skipped; the driver returns zeros if a STOP separates the write and read.
-  error_ = bus_.endTransmission(!repeatedStart_);
-  if (error_ != 0)
-    return false;
-  if (bus_.requestFrom(kAddress, static_cast<size_t>(2), true) != 2)
+  bus_.beginTransmission(kI2cAddress);
+  bus_.write(registerAddress);
+  communicationError_ = bus_.endTransmission(false);
+  if (communicationError_ != 0) return false;
+  if (bus_.requestFrom(kI2cAddress, static_cast<size_t>(kBytesPerWord), true) != kBytesPerWord)
   {
-    // Discard any partial bytes so they cannot corrupt the next read.
-    while (bus_.available())
-      bus_.read();
-    error_ = 0x80; // Short read, distinct from Wire endTransmission codes.
+    while (bus_.available()) bus_.read(); // Discard partial feedback before the next request.
+    communicationError_ = kShortReadError;
     return false;
   }
-  const uint8_t hi = bus_.read();
-  const uint8_t lo = bus_.read();
-  value = (static_cast<uint16_t>(hi) << 8) | lo;
+  const uint8_t highByte = bus_.read();
+  const uint8_t lowByte = bus_.read();
+  value = (static_cast<uint16_t>(highByte) << kBitsPerByte) | lowByte;
   return true;
 }
 
-// Reads a 32-bit encoder total stored as two 16-bit registers (high word at highReg, low word at highReg + 1).
-//
-// Implementation: each attempt reads high, low, then high again (three separate readWord transactions).
-// If the two high reads match, the low word cannot have rolled over in between, so the pair is coherent.
-// If they differ, the whole sequence is retried once; after two failed attempts error() is 0x81.
-//
-// WARNING - COSTLY: about 3 x 176 us = roughly 0.53 ms of blocking I2C time per motor at 400 kHz
-// (176 us per word, measured on the bench). Reading two motors' totals is about 1.05 ms, and the E2 test's
-// full 50 Hz tick (two totals, two recent counts and one speed write) costs roughly 1.7 ms of every 20 ms.
-// Keep this out of high-rate control loops; use it only for measurement and calibration.
-bool MotorDriver::readCumulative(uint8_t highReg, uint32_t &value)
+// Read high/low/high so a low-word rollover cannot combine mismatched words.
+// Retry once when high changes. Three transactions per attempt make this more
+// expensive than the 10 ms feedback; retain it for measurements and odometry.
+bool MotorDriver::readEncoderCounter32(uint8_t highWordRegister, uint32_t &encoderCounts)
 {
-  // Bounded high-low-high read avoids mixing words across a low-word rollover.
-  for (uint8_t attempt = 0; attempt < 2; ++attempt)
+  for (uint8_t attempt = 0; attempt < kPositionReadAttempts; ++attempt)
   {
-    uint16_t hi, lo, check;
-    if (!readWord(highReg, hi) || !readWord(highReg + 1, lo) ||
-        !readWord(highReg, check))
-      return false;
-    if (hi == check)
+    uint16_t highWord, lowWord, highWordCheck;
+    if (!readRegister16BigEndian(highWordRegister, highWord) ||
+        !readRegister16BigEndian(highWordRegister + 1, lowWord) ||
+        !readRegister16BigEndian(highWordRegister, highWordCheck)) return false;
+    if (highWord == highWordCheck)
     {
-      // Callers cast to int32_t: counts go negative when the wheel turns in reverse.
-      value = (static_cast<uint32_t>(hi) << 16) | lo;
+      encoderCounts = (static_cast<uint32_t>(highWord) << kBitsPerWord) | lowWord;
       return true;
     }
   }
-  error_ = 0x81; // Could not get a coherent snapshot.
+  communicationError_ = kIncoherentPositionError;
   return false;
 }
 
-// Sends one four-motor frame of big-endian int16 values M1..M4; M1 and M3 are sent as 0.
-bool MotorDriver::writeMotors(uint8_t reg, int16_t m2, int16_t m4)
+// Encode signed commands into M1..M4 big-endian words. Zero-fill unused M1/M3;
+// left/right map to the board's physical M2/M4 channels.
+bool MotorDriver::writeFourMotorCommands(uint8_t registerAddress, int16_t leftCommand, int16_t rightCommand)
 {
-  const uint16_t a = static_cast<uint16_t>(m2);
-  const uint16_t b = static_cast<uint16_t>(m4);
-  const uint8_t bytes[] = {0, 0, static_cast<uint8_t>(a >> 8),
-                           static_cast<uint8_t>(a), 0, 0,
-                           static_cast<uint8_t>(b >> 8), static_cast<uint8_t>(b)};
-  return write(reg, bytes, sizeof(bytes));
+  uint8_t payload[kMotorChannels * kBytesPerWord] = {};
+  const uint16_t leftBits = static_cast<uint16_t>(leftCommand);
+  const uint16_t rightBits = static_cast<uint16_t>(rightCommand);
+  const size_t leftOffset = (static_cast<uint8_t>(Wheel::Left) - 1) * kBytesPerWord;
+  const size_t rightOffset = (static_cast<uint8_t>(Wheel::Right) - 1) * kBytesPerWord;
+  payload[leftOffset] = static_cast<uint8_t>(leftBits >> kBitsPerByte);
+  payload[leftOffset + 1] = static_cast<uint8_t>(leftBits);
+  payload[rightOffset] = static_cast<uint8_t>(rightBits >> kBitsPerByte);
+  payload[rightOffset + 1] = static_cast<uint8_t>(rightBits);
+  return writeRegisterBytes(registerAddress, payload, sizeof(payload));
 }
 
-// Closed-loop speed targets (register 0x06, documented range -1000..1000, not checked here).
-bool MotorDriver::setSpeeds(int16_t m2, int16_t m4) { return writeMotors(0x06, m2, m4); }
-
-// Open-loop PWM (register 0x07, documented range -3600..3600, not checked here).
-bool MotorDriver::setPwm(int16_t m2, int16_t m4) { return writeMotors(0x07, m2, m4); }
-
-// Sets all four PWM outputs to 0 so the wheels can turn freely (speed 0 would keep the PID holding them).
-bool MotorDriver::release()
+// Command closed-loop targets in E2-established mm/s units, not raw PWM.
+bool MotorDriver::setWheelSpeedsMmPerSecond(int16_t leftMmPerSecond, int16_t rightMmPerSecond)
 {
-  const uint8_t zeros[8] = {};
-  return write(0x07, zeros, sizeof(zeros));
+  return writeFourMotorCommands(kWheelSpeedRegister, leftMmPerSecond, rightMmPerSecond);
 }
 
-// Register 0x01: 1=520, 2=310, 3=TT with encoder, 4=TT without encoder.
-bool MotorDriver::setType(uint8_t type) { return write(0x01, &type, 1); }
-
-// Writes a 16-bit parameter (dead zone 0x02, encoder lines 0x03, gear ratio 0x04); big-endian unless littleEndian.
-bool MotorDriver::setParameter(uint8_t reg, uint16_t value, bool littleEndian)
+// Zero PWM releases speed-PID control; zero SPEED instead keeps PID active.
+bool MotorDriver::releaseMotorOutputs()
 {
-  uint8_t bytes[] = {static_cast<uint8_t>(value >> 8), static_cast<uint8_t>(value)};
-  if (littleEndian)
-  {
-    const uint8_t tmp = bytes[0];
-    bytes[0] = bytes[1];
-    bytes[1] = tmp;
-  }
-  return write(reg, bytes, sizeof(bytes));
+  return writeFourMotorCommands(kMotorPwmRegister, 0, 0);
 }
 
-// Register 0x05: wheel diameter in mm as a little-endian IEEE-754 float (unlike the big-endian integers).
-bool MotorDriver::setDiameter(float mm)
+// Encode integer configuration values using the verified big-endian order.
+bool MotorDriver::writeConfiguration16(uint8_t registerAddress, uint16_t value)
+{
+  const uint8_t payload[] = {static_cast<uint8_t>(value >> kBitsPerByte), static_cast<uint8_t>(value)};
+  return writeRegisterBytes(registerAddress, payload, sizeof(payload));
+}
+
+// Diameter is the protocol exception: an IEEE-754 float in little-endian order.
+bool MotorDriver::writeWheelDiameterMm(float diameterMm)
 {
   static_assert(sizeof(float) == 4, "Driver requires 32-bit float");
-  uint32_t bits;
-  std::memcpy(&bits, &mm, sizeof(bits)); // memcpy avoids aliasing issues; shifts below make the byte order little-endian on any host
-  const uint8_t bytes[] = {static_cast<uint8_t>(bits), static_cast<uint8_t>(bits >> 8),
-                           static_cast<uint8_t>(bits >> 16), static_cast<uint8_t>(bits >> 24)};
-  return write(0x05, bytes, sizeof(bytes));
+  uint32_t floatBits;
+  std::memcpy(&floatBits, &diameterMm, sizeof(floatBits)); // Avoid pointer aliasing.
+  uint8_t payload[sizeof(floatBits)];
+  for (size_t byte = 0; byte < sizeof(payload); ++byte)
+    payload[byte] = static_cast<uint8_t>(floatBits >> (byte * kBitsPerByte));
+  return writeRegisterBytes(kWheelDiameterRegister, payload, sizeof(payload));
 }
 
-// Boot configuration from MotorSettings.h. The driver needs time to save each value, hence the delays.
-bool MotorDriver::applySettings()
+// Reapply five I2C settings at boot or while stopped. Preserve existing save
+// waits and first-error reporting. PID is explicitly left stored/unverified.
+bool MotorDriver::initialize()
 {
-  bool ok = release();
-  if (ok)
+  bool acknowledged = releaseMotorOutputs();
+  if (acknowledged)
   {
-    ok = setType(MotorSettings::type);
-    delay(100);
+    const uint8_t motorType = MotorSettings::motorType;
+    acknowledged = writeRegisterBytes(kMotorTypeRegister, &motorType, sizeof(motorType));
+    delay(kConfigurationSaveDelayMs);
   }
-  if (ok)
+  if (acknowledged)
   {
-    ok = setParameter(0x02, MotorSettings::deadZone, false);
-    delay(100);
+    acknowledged = writeConfiguration16(kPwmDeadZoneRegister, MotorSettings::pwmDeadZone);
+    delay(kConfigurationSaveDelayMs);
   }
-  if (ok)
+  if (acknowledged)
   {
-    ok = setParameter(0x03, MotorSettings::pulseLine, false);
-    delay(100);
+    acknowledged = writeConfiguration16(kEncoderPulsesRegister, MotorSettings::encoderPulsesPerMotorRevolution);
+    delay(kConfigurationSaveDelayMs);
   }
-  if (ok)
+  if (acknowledged)
   {
-    ok = setParameter(0x04, MotorSettings::pulsePhase, false);
-    delay(100);
+    acknowledged = writeConfiguration16(kGearRatioRegister, MotorSettings::gearRatio);
+    delay(kConfigurationSaveDelayMs);
   }
-  if (ok)
+  if (acknowledged)
   {
-    ok = setDiameter(MotorSettings::diameterMm);
-    delay(100);
+    acknowledged = writeWheelDiameterMm(MotorSettings::wheelDiameterMm);
+    delay(kConfigurationSaveDelayMs);
   }
-  const uint8_t settingsError = error_;
-  const bool released = release();
-  if (!ok)
-    error_ = settingsError; // Keep the first failure's code rather than the cleanup's.
-  return ok && released;
+  const uint8_t configurationError = communicationError_;
+  const bool outputsReleased = releaseMotorOutputs(); // Attempt cleanup even after a failed setting.
+  if (!acknowledged) communicationError_ = configurationError;
+  return acknowledged && outputsReleased;
 }
 
-// Recent-count registers are 0x10..0x13 for M1..M4.
-bool MotorDriver::readRecent(uint8_t motor, int16_t &counts)
+// Decode signed encoder counts in the driver's last 10 ms window for a wheel.
+bool MotorDriver::readEncoderCountLast10Ms(Wheel wheel, int16_t &encoderCounts)
 {
-  if (motor < 1 || motor > 4)
-    return false;
-  uint16_t raw;
-  if (!readWord(0x10 + motor - 1, raw))
-    return false;
-  counts = static_cast<int16_t>(raw);
+  const uint8_t motorChannel = static_cast<uint8_t>(wheel);
+  if (motorChannel < 1 || motorChannel > kMotorChannels) return false;
+  uint16_t rawCounts;
+  if (!readRegister16BigEndian(kEncoder10MsRegisterBase + motorChannel - 1, rawCounts)) return false;
+  encoderCounts = static_cast<int16_t>(rawCounts);
   return true;
 }
 
-// Total-count registers are 0x20/0x21 (M1), 0x22/0x23 (M2), 0x24/0x25 (M3), 0x26/0x27 (M4).
-bool MotorDriver::readTotal(uint8_t motor, int32_t &counts)
+// Convert the 10 ms counts into encoder-derived wheel mm/s. M2/M4 are read
+// sequentially, not as an atomic pair. Keep both caller outputs unchanged if
+// either transaction fails; this does not read the driver's serial speed value.
+bool MotorDriver::readWheelSpeedsMmPerSecond(float &leftMmPerSecond, float &rightMmPerSecond)
 {
-  if (motor < 1 || motor > 4)
-    return false;
-  uint32_t raw;
-  if (!readCumulative(0x20 + 2 * (motor - 1), raw))
-    return false;
-  counts = static_cast<int32_t>(raw);
+  int16_t leftCounts, rightCounts;
+  if (!readEncoderCountLast10Ms(Wheel::Left, leftCounts) ||
+      !readEncoderCountLast10Ms(Wheel::Right, rightCounts)) return false;
+  const float speedPerCount = MotorSettings::millimetersPerEncoderCount / kEncoderWindowSeconds;
+  leftMmPerSecond = leftCounts * speedPerCount;
+  rightMmPerSecond = rightCounts * speedPerCount;
+  return true;
+}
+
+// Read signed encoder position from the high/low register pair for this wheel.
+bool MotorDriver::readEncoderPosition(Wheel wheel, int32_t &encoderCounts)
+{
+  const uint8_t motorChannel = static_cast<uint8_t>(wheel);
+  if (motorChannel < 1 || motorChannel > kMotorChannels) return false;
+  uint32_t rawCounts;
+  const uint8_t highWordRegister = kEncoderPositionRegisterBase + kBytesPerWord * (motorChannel - 1);
+  if (!readEncoderCounter32(highWordRegister, rawCounts)) return false;
+  encoderCounts = static_cast<int32_t>(rawCounts);
   return true;
 }

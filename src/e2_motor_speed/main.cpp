@@ -99,8 +99,8 @@ namespace
   bool printSettings()
   {
     return writeLog("# SETTINGS type=%u deadzone=%u lines=%u ratio=%u diameter_mm=%.1f pid=%g,%g,%g pid_source=stored_unverified\n",
-                  MotorSettings::type, MotorSettings::deadZone, MotorSettings::pulseLine,
-                  MotorSettings::pulsePhase, MotorSettings::diameterMm,
+                  MotorSettings::motorType, MotorSettings::pwmDeadZone, MotorSettings::encoderPulsesPerMotorRevolution,
+                  MotorSettings::gearRatio, MotorSettings::wheelDiameterMm,
                   MotorSettings::storedP, MotorSettings::storedI, MotorSettings::storedD);
   }
 
@@ -110,8 +110,8 @@ namespace
   {
     sweep.running = false;
     // Attempt both writes even if the first fails. ACK is not physical stop proof.
-    const bool stopped = driver.setSpeeds(0, 0);
-    const bool released = driver.release();
+    const bool stopped = driver.setWheelSpeedsMmPerSecond(0, 0);
+    const bool released = driver.releaseMotorOutputs();
     if (!stopped || !released)
     {
       sweep.configured = false;
@@ -127,8 +127,8 @@ namespace
   void configureMotorDriver()
   {
     // Retain saved PID: no documented I2C access.
-    sweep.configured = driver.applySettings();
-    writeLog("# CONFIG ack_all=%u error=%u pid_source=stored_unverified\n", sweep.configured, driver.error());
+    sweep.configured = driver.initialize();
+    writeLog("# CONFIG ack_all=%u error=%u pid_source=stored_unverified\n", sweep.configured, driver.lastCommunicationError());
     printSettings();
   }
 
@@ -241,7 +241,7 @@ namespace
     const TrialPhase phase = trialPhase(trialElapsedMs);
     const int16_t applied = phase.motorsActive ? sweep.target : 0;
     const uint32_t sampleStartedAtUs = micros();
-    if (!driver.setSpeeds(applied, applied))
+    if (!driver.setWheelSpeedsMmPerSecond(applied, applied))
     {
       ++statistics.errors;
       finishSweep("write_error");
@@ -250,7 +250,7 @@ namespace
     const uint32_t writeDurationUs = micros() - sampleStartedAtUs;
     int16_t motor2Recent, motor4Recent;
     int32_t motor2Count, motor4Count;
-    if (!driver.readRecent(2, motor2Recent) || !driver.readRecent(4, motor4Recent) || !driver.readTotal(2, motor2Count))
+    if (!driver.readEncoderCountLast10Ms(MotorDriver::Wheel::Left, motor2Recent) || !driver.readEncoderCountLast10Ms(MotorDriver::Wheel::Right, motor4Recent) || !driver.readEncoderPosition(MotorDriver::Wheel::Left, motor2Count))
     {
       ++statistics.errors;
       finishSweep("read_error");
@@ -258,7 +258,7 @@ namespace
     }
     // Timestamp each cumulative count separately; reads do not occur together.
     const uint32_t motor2ReadAtUs = micros();
-    if (!driver.readTotal(4, motor4Count))
+    if (!driver.readEncoderPosition(MotorDriver::Wheel::Right, motor4Count))
     {
       ++statistics.errors;
       finishSweep("read_error");

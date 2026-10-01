@@ -1,3 +1,5 @@
+> Archived: source and historical results are preserved. The old API and byte-order diagnostics are no longer maintained; E1 has no active build environment. Use E2 for motor testing.
+
 # E1 firmware — motor driver
 
 One interactive firmware covers the 100/400 kHz communication checks, manual wheel rotation, and 5-second M2/M4 or both-motor runs. Uses the shared `lib/MotorDriver` register interface. Startup automatically configures the driver and releases outputs; motion requires serial commands. During motion, speed commands are refreshed at 50 Hz.
