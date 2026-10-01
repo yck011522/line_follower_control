@@ -9,7 +9,13 @@
 class LineSensor
 {
 public:
-  enum class Status { Idle, Success, Failure };
+  static constexpr uint32_t BUS_SPEED = 400000;
+  enum class Status
+  {
+    Idle,
+    Success,
+    Failure
+  };
 
   // The original sensor byte is active-low: bit 7 is X1, bit 0 is X8.
   // Before the first successful request, valid is false and ageUs is UINT64_MAX.
@@ -31,15 +37,16 @@ public:
   };
 
   // Automatically configure the supplied SDA/SCL pins, 1 MHz clock and 1 ms
-  // Wire timeout. requestHz=0 means the 1000 Hz maximum; higher rates are capped.
-  // maxAttempts includes the initial request; use a nonzero value (default five).
-  LineSensor(int sda, int scl, uint32_t requestHz = 1000, uint8_t maxAttempts = 5)
-      : bus_(1), maxAttempts_(maxAttempts)
+  // Wire timeout. requestFrequencyHz=0 means the 1000 Hz maximum; higher rates are capped.
+  // maximumAttempts includes the initial request; use a nonzero value (default five).
+  LineSensor(int sdaPin, int sclPin, uint32_t requestFrequencyHz = 1000, uint8_t maximumAttempts = 5)
+      : bus_(1), maxAttempts_(maximumAttempts)
   {
-    const uint32_t hz = requestHz == 0 || requestHz > 1000 ? 1000 : requestHz;
+    const uint32_t effectiveRequestFrequencyHz =
+        requestFrequencyHz == 0 || requestFrequencyHz > 1000 ? 1000 : requestFrequencyHz;
     // Round up so an integer period never exceeds the requested rate.
-    periodUs_ = (1000000ULL + hz - 1) / hz;
-    ready_ = bus_.begin(sda, scl, 1000000);
+    periodUs_ = (1000000ULL + effectiveRequestFrequencyHz - 1) / effectiveRequestFrequencyHz;
+    ready_ = bus_.begin(sdaPin, sclPin, BUS_SPEED);
     bus_.setTimeOut(1);
   }
 
@@ -52,12 +59,12 @@ public:
   Status tick()
   {
     const uint64_t now = esp_timer_get_time();
-    if (!ready_ || now < nextRequestUs_) return Status::Idle;
+    if (!ready_ || now < nextRequestUs_)
+      return Status::Idle;
 
-    // Anchor each normal poll to its actual start, with no catch-up requests.
-    // Retries retain this poll's normal next-due time until the batch finishes.
+    // Anchor every request, including retries, to its actual start.
+    // The configured frequency limits all traffic, with no catch-up requests.
     const uint64_t start = esp_timer_get_time();
-    if (attempts_ == 0) nextPollUs_ = start + periodUs_;
     ++attempts_;
     request_.startedAtUs = start;
     request_.attempt = attempts_;
@@ -82,18 +89,18 @@ public:
       {
         // Discard partial feedback as E3 does. Failed requests never overwrite
         // the last successful byte or its timestamp, so its age keeps growing.
-        while (bus_.available()) bus_.read();
+        while (bus_.available())
+          bus_.read();
       }
     }
     request_.durationUs = esp_timer_get_time() - start;
 
-    // Every physical request, including retries, has at least 1000 us between
-    // recorded starts. A late tick cannot accumulate a burst of overdue reads.
-    nextRequestUs_ = start + 1000;
+    // At 200 Hz every request/retry starts at least 5000 us after the previous
+    // start. The existing 1000 Hz cap always preserves at least 1000 us spacing.
+    nextRequestUs_ = start + periodUs_;
     if (success || attempts_ >= maxAttempts_)
     {
       attempts_ = 0;
-      if (nextPollUs_ > nextRequestUs_) nextRequestUs_ = nextPollUs_;
     }
     return success ? Status::Success : Status::Failure;
   }
@@ -103,7 +110,8 @@ public:
   Reading reading() const
   {
     Reading result = latest_;
-    if (result.valid) result.ageUs = esp_timer_get_time() - receivedAtUs_;
+    if (result.valid)
+      result.ageUs = esp_timer_get_time() - receivedAtUs_;
     return result;
   }
 
@@ -117,7 +125,7 @@ private:
   TwoWire bus_;
   bool ready_ = false;
   uint8_t maxAttempts_ = 5, attempts_ = 0;
-  uint64_t periodUs_ = 1000, nextPollUs_ = 0, nextRequestUs_ = 0;
+  uint64_t periodUs_ = 1000, nextRequestUs_ = 0;
   uint64_t receivedAtUs_ = 0;
   Reading latest_;
   Request request_;

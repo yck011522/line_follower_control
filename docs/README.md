@@ -10,6 +10,7 @@
 | [E0 motor PID tuning](../test/E0_motor_tuning/README.md) | Direct USB serial PID candidates, step responses, and Matplotlib plots |
 | [E1 motor test plan](../test/E1_motor_communication/PLAN.md) | M2/M4 speed, encoder feedback, stop, and 100/400 kHz comparison |
 | [E2 motor speed test](../test/E2_motor_speed/README.md) | Separate 400 kHz speed sweep and log analysis |
+| [E5 line following](../src/e5_line_follow/README.md) | Center estimation, exponential filtering, PD steering, and loop timing |
 | [Development environment](development-environment.md) | Local PlatformIO setup, board selection, and serial-port discovery |
 | [Open questions](open-questions.md) | Information needed before implementation and unresolved design choices |
 | [Progress](progress.md) | Development sequence, completion status, and evidence |

@@ -1,22 +1,23 @@
 # LineSensor
 
 One header, `LineSensor.h`, refactored from the standalone E3 direct read.
-Construct inside `setup()`: `static LineSensor sensor(D6, D7, 1000, 5);`.
-The arguments are SDA, SCL, normal poll frequency and maximum total attempts.
+Construct inside `setup()`: `static LineSensor sensor(D6, D7, 200, 5);`.
+The arguments are SDA, SCL, request frequency (including retries) and maximum total attempts.
 
 The constructor configures I2C controller 1, 1 MHz, a 1 ms requested Wire timeout,
 address 0x12 and register 0x30. Use Arduino 3.3.12 as pinned by E3/E4. The chosen
 pins must not be owned by another bus object. Use from one task.
 
 `tick()` returns `Status::Idle`, `Success` or `Failure`. It makes at most one
-physical request per call. Requests and retries start at least 1000 us apart.
+physical request per call. Requests and retries respect the selected frequency:
+at 200 Hz, starts are at least 5000 us apart; the maximum is 1000 Hz.
 Rate 0 means the 1000 Hz maximum; values above 1000 are capped. Other rates use
 an integer period rounded up. Polls anchor to actual starts; there is no catch-up.
 Five attempts means the first request plus up to four retries. Retries are
 serviced by subsequent ticks, without sleeping in the library. Slow caller ticks
 reduce the actual rate and delay retries. Each I2C transaction remains blocking.
-After a batch succeeds or exhausts its attempts, the next normal poll resumes
-when both its normal period and the 1 ms request spacing allow it.
+After a batch succeeds or exhausts its attempts, the next poll follows the same
+request spacing. Call tick frequently enough to achieve the selected rate.
 
 `reading()` returns `valid`, the original active-low `rawMask`, and dynamically
 calculated `ageUs`. Before success, valid=false and ageUs=UINT64_MAX. Failed

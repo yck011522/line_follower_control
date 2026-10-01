@@ -24,8 +24,7 @@ src/
   e2_motor_speed/            Separate motor speed-command sweep
   e3_line_sensor/            Standalone line-sensor benchmark
   e4_line_sensor_library/    Line sensor library experiment
-  e5_nfc_reader/             Standalone RC522 experiment
-  e6_wireless/               Robot/bridge communication experiment
+  e5_line_follow/            PD line-following experiment
   robot/                    Future integrated robot application
   bridge/                   Future USB radio bridge application
 test/
@@ -56,3 +55,8 @@ measured speed. See the [E2 guide](test/E2_motor_speed/README.md) and the
 All Python test connections must set **RTS off before opening the port**.
 
 Start with [E0 direct USB PID tuning](test/E0_motor_tuning/README.md), then the [E1 motor test plan](test/E1_motor_communication/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).
+
+[E5 line following](src/e5_line_follow/README.md) combines the sensor and motor
+libraries with test-local center estimation, filtering, and PD steering. It starts
+at 100 mm/s automatically and runs until stopped or a fault occurs. Status defaults
+to 5 Hz and includes measured loop frequency and control-work timing.

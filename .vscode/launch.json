@@ -12,22 +12,22 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
-            "projectEnvName": "e2_motor_speed",
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e5_line_follow/firmware.elf",
+            "projectEnvName": "e5_line_follow",
             "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd",
             "preLaunchTask": {
                 "type": "PlatformIO",
-                "task": "Pre-Debug (e2_motor_speed)"
+                "task": "Pre-Debug (e5_line_follow)"
             }
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
-            "projectEnvName": "e2_motor_speed",
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e5_line_follow/firmware.elf",
+            "projectEnvName": "e5_line_follow",
             "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd"
@@ -36,8 +36,8 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e2_motor_speed/firmware.elf",
-            "projectEnvName": "e2_motor_speed",
+            "executable": "C:/Users/Victor/Documents/GitHub/line_follower_control/.pio/build/e5_line_follow/firmware.elf",
+            "projectEnvName": "e5_line_follow",
             "toolchainBinDir": "C:/Users/Victor/.platformio/packages/toolchain-xtensa-esp-elf/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "svdPath": "C:/Users/Victor/.platformio/platforms/espressif32/misc/svd/esp32s3.svd",

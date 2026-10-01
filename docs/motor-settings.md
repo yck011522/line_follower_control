@@ -22,8 +22,8 @@ selected driver setting; the motor datasheet's fractional 22.569 ratio remains
 relevant to independent odometry calibration. Diameter 65 mm is nominal.
 
 M2 is the left drive motor, M4 the right; M1/M3 are unused. The protocol exposes
-one board-level PID triplet. Positive/negative electrical command signs have not
-yet been mapped to vehicle forward/reverse for both mounted wheels.
+one board-level PID triplet. For both mounted wheels, negative electrical commands move the car forward
+(user-confirmed for E5); E5 maps positive forward-speed settings to negative M2/M4 commands.
 
 ## What E0 established
 
