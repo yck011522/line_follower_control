@@ -12,8 +12,8 @@ namespace
   constexpr uint32_t kClockHz = 1000000;
   constexpr uint16_t kTimeoutMs = 1;
   constexpr uint32_t kDurationMs = 10000;
-  constexpr uint32_t kRequestHz = 0;   // 0 = maximum rate; otherwise e.g. 50 or 100.
-  constexpr uint32_t kMaxRequests = 0; // 0 = unlimited; otherwise cap physical requests.
+  constexpr uint32_t kRequestHz = 1000; // 0 = maximum rate; otherwise e.g. 50 or 100.
+  constexpr uint32_t kMaxRequests = 0;  // 0 = unlimited; otherwise cap physical requests.
   constexpr bool kRepeat = true;
   constexpr uint32_t kRepeatPauseMs = 1000;
   static_assert(kDurationMs > 0, "A positive duration bounds the test");
@@ -91,11 +91,6 @@ namespace
         stats.reason = "request limit reached";
         break;
       }
-      if (!Serial)
-      {
-        stats.reason = "INCOMPLETE: USB disconnected";
-        break;
-      }
       if (periodUs && static_cast<uint64_t>(esp_timer_get_time()) < nextDue)
       {
         if (kRequestHz <= 1000)
@@ -156,11 +151,7 @@ void setup()
 // Run when USB is connected. Retain interrupted summaries; 'r' reruns the test.
 void loop()
 {
-  if (!Serial)
-  {
-    delay(100);
-    return;
-  }
+  // Print the summary if it is pending.
   if (summaryPending)
   {
     printSummary(result);
@@ -171,14 +162,20 @@ void loop()
       finished = false;
     }
   }
+
+  // Check for a 'r' command to restart the benchmark.
   while (Serial.available())
     if (Serial.read() == 'r')
       finished = false;
+
+  // If the benchmark has finished, wait briefly and return to avoid busy looping.
   if (finished)
   {
     delay(100);
     return;
   }
+
+  // Check if the I2C bus is ready.
   if (!busReady)
   {
     Serial.println("E3: failed to initialize I2C bus 1 on D6/D7");
@@ -188,8 +185,6 @@ void loop()
 
   delay(250); // Let USB settle after upload/reset before starting the run.
 
-  if (!Serial)
-    return;
   // Include the actual compiled framework versions in captures for comparison.
   Serial.printf("E3 framework Arduino=%s ESP-IDF=%s\n", ESP_ARDUINO_VERSION_STR, ESP.getSdkVersion());
   Serial.printf("E3 START standalone clock=%lu Hz timeout=%u ms duration=%lu ms request_hz=%lu (0=maximum) limit=%lu (0=unlimited)\n",

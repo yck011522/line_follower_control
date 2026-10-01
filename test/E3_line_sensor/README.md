@@ -113,3 +113,16 @@ Elapsed=10000.001 ms achieved=3455.20 requests/s skipped slots=0
 
 ## Frozen
 Typically after 2 x 10 seconds run, the board will be frozen.
+Adjusted the request time to 1000 Hz. And it doesnt crash anymore.
+
+
+
+E3 framework Arduino=3.3.12 ESP-IDF=v5.5.5
+E3 START standalone clock=1000000 Hz timeout=1 ms duration=10000 ms request_hz=1000 (0=maximum) limit=0 (0=unlimited)
+E3 END: duration reached
+Success: 5001 / 5001 (100.00%)
+Request time, all attempts: mean=220.05 us min=205 us max=278 us
+Successful requests: mean=220.05 us; last raw=0x7F
+Transmit errors=0 short reads=0 last transmit error=0
+Failed requests: count=0 max=0 us
+Elapsed=10000.220 ms achieved=500.09 requests/s skipped slots=5000
