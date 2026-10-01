@@ -1,84 +1,91 @@
 #include <Arduino.h>
-#include <LineSensor.h>
+#include <Wire.h>
 #include <esp_timer.h>
+#include <esp_arduino_version.h>
 
 namespace
 {
-  LineSensor *sensor = nullptr; // The hardware-owning object is constructed inside setup().
-
-  // Edit these settings and upload E3. A "request" means one complete register
-  // selection plus one-byte read, not a multi-byte read from adjacent registers.
+  // Standalone benchmark: do not use the LineSensor class in this comparison.
+  TwoWire lineBus(1);
+  constexpr uint8_t kAddress = 0x12;
+  constexpr uint8_t kRegister = 0x30;
   constexpr uint32_t kClockHz = 1000000;
-  constexpr uint16_t kTimeoutMs = 1;      // Timeout per Wire operation, not per whole request.
-  constexpr uint32_t kDurationMs = 10000; // Time budget: 1000 = 1 second, 10000 = 10 seconds.
-  constexpr uint32_t kRequestHz = 0;      // 0 = as fast as possible; otherwise e.g. 50 or 100.
-  constexpr uint8_t kMaxAttempts = 5;    // Total physical requests per due poll, including the first.
-  constexpr uint32_t kMaxRequests = 0;    // 0 = no count limit; set 100 for a 100-request burst.
-  constexpr bool kRepeat = false;         // false = one run; send 'r' over serial to rerun.
+  constexpr uint16_t kTimeoutMs = 1;
+  constexpr uint32_t kDurationMs = 10000;
+  constexpr uint32_t kRequestHz = 0;   // 0 = maximum rate; otherwise e.g. 50 or 100.
+  constexpr uint32_t kMaxRequests = 0; // 0 = unlimited; otherwise cap physical requests.
+  constexpr bool kRepeat = true;
   constexpr uint32_t kRepeatPauseMs = 1000;
-  static_assert(kDurationMs > 0, "A positive duration bounds every test");
-  static_assert(kRequestHz <= 1000000, "Requested period must be at least one microsecond");
+  static_assert(kDurationMs > 0, "A positive duration bounds the test");
+  static_assert(kRequestHz <= 1000000, "Period must be at least one microsecond");
 
   struct Statistics
   {
     uint32_t attempts = 0, successes = 0, transmitErrors = 0, shortReads = 0;
-    uint32_t polls = 0, recoveredPolls = 0, failedPolls = 0, retries = 0;
     uint64_t totalUs = 0, successUs = 0, minimumUs = UINT64_MAX, maximumUs = 0;
-    uint64_t elapsedUs = 0, skippedSlots = 0;
+    uint64_t elapsedUs = 0, skippedSlots = 0, maximumFailedUs = 0;
     uint8_t lastRaw = 0, lastTransmitError = 0;
     const char *reason = "duration reached";
   };
-
   bool busReady = false, finished = false, summaryPending = false;
   Statistics result;
 
-  // Ask the library to service a due poll and aggregate its physical-request
-  // statistics. A recovered poll must not hide failed requests from the benchmark.
-  bool readOnce(Statistics &stats)
+  // Perform one direct register-pointer write and repeated-START byte read.
+  // Count each physical request once; there are no automatic retries here.
+  void readOnce(Statistics &stats)
   {
-    if (kMaxRequests)
+    const uint64_t start = esp_timer_get_time();
+    bool success = false;
+    lineBus.beginTransmission(kAddress);
+    lineBus.write(kRegister);
+    const uint8_t error = lineBus.endTransmission(false);
+    if (error)
     {
-      // Keep the optional physical-request cap exact, even on the last retry batch.
-      const uint32_t remaining = kMaxRequests - stats.attempts;
-      sensor->setMaxAttempts(static_cast<uint8_t>(min(remaining, static_cast<uint32_t>(kMaxAttempts))));
+      ++stats.transmitErrors;
+      stats.lastTransmitError = error;
     }
-    const LineSensor::TickResult poll = sensor->tick();
-    if (!poll.polled) return false;
-    ++stats.polls;
-    stats.attempts += poll.attempts;
-    stats.retries += poll.attempts - 1;
-    stats.transmitErrors += poll.transmitErrors;
-    stats.shortReads += poll.shortReads;
-    if (poll.transmitErrors) stats.lastTransmitError = poll.lastTransmitError;
-    stats.totalUs += poll.requestTotalUs;
-    stats.skippedSlots += poll.skippedSlots;
-    if (poll.minimumRequestUs < stats.minimumUs) stats.minimumUs = poll.minimumRequestUs;
-    if (poll.maximumRequestUs > stats.maximumUs) stats.maximumUs = poll.maximumRequestUs;
-    if (poll.updated)
+    else
+    {
+      const size_t count = lineBus.requestFrom(kAddress, static_cast<size_t>(1), true);
+      if (count == 1 && lineBus.available() == 1)
+      {
+        stats.lastRaw = static_cast<uint8_t>(lineBus.read());
+        success = true;
+      }
+      else
+      {
+        ++stats.shortReads;
+        while (lineBus.available())
+          lineBus.read(); // Discard partial feedback.
+      }
+    }
+    const uint64_t duration = esp_timer_get_time() - start;
+    ++stats.attempts;
+    stats.totalUs += duration;
+    if (duration < stats.minimumUs)
+      stats.minimumUs = duration;
+    if (duration > stats.maximumUs)
+      stats.maximumUs = duration;
+    if (success)
     {
       ++stats.successes;
-      stats.successUs += poll.successfulRequestUs;
-      stats.lastRaw = sensor->reading().rawMask;
-      if (poll.attempts > 1) ++stats.recoveredPolls;
+      stats.successUs += duration;
     }
-    else ++stats.failedPolls;
-    return true;
+    else if (duration > stats.maximumFailedUs)
+      stats.maximumFailedUs = duration; // Separate failure latency from normal successful reads.
   }
 
-  // Run until the time budget or optional count cap is reached. Fixed-rate mode
-  // uses the library's schedule; no independent second schedule can delay a due poll.
+  // Run direct reads within the duration/count limits, skipping missed fixed-rate
+  // slots rather than issuing a burst to catch up after a slow request.
   Statistics runBenchmark()
   {
     Statistics stats;
     const uint64_t start = esp_timer_get_time();
     const uint64_t end = start + static_cast<uint64_t>(kDurationMs) * 1000;
-    sensor->setMaxAttempts(kMaxAttempts);
-    sensor->resetSchedule(); // Start each run immediately, without counting previous USB idle time.
-    while (true)
+    const uint64_t periodUs = kRequestHz ? 1000000ULL / (kRequestHz ? kRequestHz : 1) : 0;
+    uint64_t nextDue = start;
+    while (esp_timer_get_time() < end)
     {
-      const uint64_t now = esp_timer_get_time();
-      if (now >= end)
-        break;
       if (kMaxRequests && stats.attempts >= kMaxRequests)
       {
         stats.reason = "request limit reached";
@@ -89,27 +96,34 @@ namespace
         stats.reason = "INCOMPLETE: USB disconnected";
         break;
       }
-      if (!readOnce(stats))
+      if (periodUs && static_cast<uint64_t>(esp_timer_get_time()) < nextDue)
       {
-        // Wait outside request timing when tick says the next poll is not due.
-        // Short waits retain cadence; low polling rates also let the RTOS idle.
-        if (kRequestHz <= 1000) delay(1);
-        else delayMicroseconds(50);
+        if (kRequestHz <= 1000)
+          delay(1);
+        else
+          delayMicroseconds(50);
+        continue;
       }
-      else if (kRequestHz == 0 && stats.polls % 256 == 0)
+      readOnce(stats);
+      if (periodUs)
       {
-        // Yield after each burst of polls. This affects throughput but not the
-        // individual I2C-request latency statistics supplied by the library.
-        delay(1);
+        nextDue += periodUs;
+        const uint64_t now = esp_timer_get_time();
+        if (now > nextDue)
+        {
+          const uint64_t skipped = (now - nextDue + periodUs - 1) / (periodUs ? periodUs : 1);
+          stats.skippedSlots += skipped;
+          nextDue += skipped * periodUs;
+        }
       }
+      else if (stats.attempts % 256 == 0)
+        delay(1); // Yield between bursts, outside individual request timing.
     }
-    // An in-flight poll (including bounded retries) may finish past the time budget.
     stats.elapsedUs = esp_timer_get_time() - start;
     return stats;
   }
 
-  // Print the final statistics, including failures in the overall average.
-  // A successful transport read does not prove the sensor produced fresh data.
+  // Print aggregate results outside the timed I2C request path.
   void printSummary(const Statistics &stats)
   {
     Serial.printf("E3 END: %s\n", stats.reason);
@@ -123,39 +137,23 @@ namespace
                     double(stats.successUs) / stats.successes, stats.lastRaw);
     Serial.printf("Transmit errors=%lu short reads=%lu last transmit error=%u\n",
                   (unsigned long)stats.transmitErrors, (unsigned long)stats.shortReads, stats.lastTransmitError);
-    Serial.printf("Polls=%lu recovered=%lu failed=%lu retry requests=%lu\n",
-                  (unsigned long)stats.polls, (unsigned long)stats.recoveredPolls,
-                  (unsigned long)stats.failedPolls, (unsigned long)stats.retries);
-    const LineSensor::Reading reading = sensor->reading();
-    if (reading.valid)
-      Serial.printf("Latest raw=0x%02X age=%.3f ms\n", reading.rawMask, reading.ageUs / 1000.0);
-    else Serial.println("Latest reading: none received yet");
+    Serial.printf("Failed requests: count=%lu max=%llu us\n",
+                  (unsigned long)(stats.attempts - stats.successes), (unsigned long long)stats.maximumFailedUs);
     Serial.printf("Elapsed=%.3f ms achieved=%.2f requests/s skipped slots=%llu\n\n",
                   stats.elapsedUs / 1000.0, stats.elapsedUs ? 1e6 * stats.attempts / stats.elapsedUs : 0.0,
                   (unsigned long long)stats.skippedSlots);
   }
 }
 
-// Initialize only the line sensor's second I2C controller; no motor configuration
-// or motion is involved in this experiment. USB connection is awaited in loop().
+// Initialize the second I2C bus directly, without constructing LineSensor.
 void setup()
 {
   Serial.begin(115200);
-  LineSensor::Config config;
-  config.clockHz = kClockHz;
-  config.timeoutMs = kTimeoutMs;
-  config.requestHz = kRequestHz;
-  config.maxAttempts = kMaxAttempts;
-  // Function-local construction initializes the bus automatically after Arduino
-  // startup. Its lifetime covers the whole application, including repeated runs.
-  static LineSensor lineSensor(config);
-  sensor = &lineSensor;
-  busReady = sensor->ready();
+  busReady = lineBus.begin(D6, D7, kClockHz);
+  lineBus.setTimeOut(kTimeoutMs);
 }
 
-// Run once when a serial listener connects, or repeat if enabled above. Retain an
-// interrupted run's summary in RAM so it can be printed when USB reconnects.
-// Sending 'r' reruns the same compiled settings without resetting the controller.
+// Run when USB is connected. Retain interrupted summaries; 'r' reruns the test.
 void loop()
 {
   if (!Serial)
@@ -174,10 +172,8 @@ void loop()
     }
   }
   while (Serial.available())
-  {
     if (Serial.read() == 'r')
       finished = false;
-  }
   if (finished)
   {
     delay(100);
@@ -189,15 +185,17 @@ void loop()
     finished = true;
     return;
   }
-  // Upload/reset can briefly look like a connected terminal. Let USB settle
-  // before starting; a later disconnect still marks the run incomplete.
-  delay(250);
+
+  delay(250); // Let USB settle after upload/reset before starting the run.
+
   if (!Serial)
     return;
-  Serial.printf("E3 START clock=%lu Hz timeout=%u ms duration=%lu ms request_hz=%lu (0=maximum) limit=%lu (0=unlimited) max_attempts=%u\n",
+  // Include the actual compiled framework versions in captures for comparison.
+  Serial.printf("E3 framework Arduino=%s ESP-IDF=%s\n", ESP_ARDUINO_VERSION_STR, ESP.getSdkVersion());
+  Serial.printf("E3 START standalone clock=%lu Hz timeout=%u ms duration=%lu ms request_hz=%lu (0=maximum) limit=%lu (0=unlimited)\n",
                 (unsigned long)kClockHz, kTimeoutMs, (unsigned long)kDurationMs,
-                (unsigned long)kRequestHz, (unsigned long)kMaxRequests, kMaxAttempts);
-  Serial.flush(); // Drain the heading before timing begins.
+                (unsigned long)kRequestHz, (unsigned long)kMaxRequests);
+  Serial.flush();
   result = runBenchmark();
   finished = true;
   summaryPending = true;

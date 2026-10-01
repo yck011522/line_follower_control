@@ -53,3 +53,18 @@ opening. `rtscts=False` disables flow control but does not set RTS low.
 E2 opens only the ESP32 USB port (historically COM4); E0 used driver USB COM5.
 Recheck port enumeration after changing cables. Firmware upload/reset tooling is
 separate from these test-port rules. See [motor settings](motor-settings.md).
+
+
+## E3 Arduino 3.3.12 migration (2026-10-01)
+
+Only `e3_line_sensor` overrides the shared platform with the pinned pioarduino
+`55.03.312-1` release URL in `platformio.ini`. It packages Espressif's official
+Arduino 3.3.12 release and ESP-IDF 5.5.5. The integration is community maintained.
+E1 and E2 still select `espressif32@6.12.0`. Board aliases and native USB CDC
+settings were checked against the new installed XIAO definition: D6=GPIO43,
+D7=GPIO44, USB mode 1, CDC enabled on boot.
+
+The first installation needs large SDK/toolchain downloads. Its initial Python
+`uv` setup failed; verifying/installing `uv` with the PlatformIO penv Python and
+retrying allowed installation to continue. Do not replace this pinned platform
+with the moving `stable` download URL for repeatable measurements.
