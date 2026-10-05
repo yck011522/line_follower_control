@@ -16,3 +16,4 @@ Thumbs.db
 # Generated experiment runs; retain each results directory placeholder.
 test/E*/results/*
 !test/E*/results/.gitkeep
+.vscode/*

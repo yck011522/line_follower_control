@@ -9,7 +9,7 @@
 class LineSensor
 {
 public:
-  static constexpr uint32_t BUS_SPEED = 400000;
+  static constexpr uint32_t BUS_SPEED = 1000000;
   enum class Status
   {
     Idle,

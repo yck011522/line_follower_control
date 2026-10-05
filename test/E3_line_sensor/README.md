@@ -15,7 +15,7 @@ This confirms stale-reading retention on hardware, but also shows that synchrono
 
 Current diagnosis: E3 has been switched back to a standalone direct-I2C benchmark for comparison. See [diagnosis captures](results/20261001T080811Z_diagnosis/README.md). Both implementations failed while the reader was stuck; the operator subsequently power-cycled the reader and restored standalone reads.
 
-Results
+# Results
 
 E3 START clock=400000 Hz timeout=1 ms duration=1000 ms request_hz=0 (0=maximum) limit=0 (0=unlimited)
 E3 END: duration reached
@@ -41,6 +41,7 @@ Successful requests: mean=174.00 us; last raw=0x3F
 Transmit errors=0 short reads=0 last transmit error=0
 Elapsed=1000.002 ms achieved=100.00 requests/s skipped slots=0
 
+# Testing it for 10 Seconds. I start to see requestFrom() error
 
 E3 START clock=1000000 Hz timeout=1 ms duration=10000 ms request_hz=0 (0=maximum) limit=0 (0=unlimited)
 [ 39507][E][Wire.cpp:499] requestFrom(): i2cWriteReadNonStop returned Error 263
@@ -128,3 +129,4 @@ Elapsed=10000.002 ms achieved=1000.00 requests/s skipped slots=0
 ## Conclusion
 
 I think it is safe to use the 1M I2C speed but limit rate to 1000 Hz to avoid crashes.
+
