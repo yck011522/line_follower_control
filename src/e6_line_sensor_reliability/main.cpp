@@ -1,47 +1,54 @@
 // Include libraries.
 #include <Arduino.h>
-
+#include <MotorDriver.h>
 #include <Wire.h>
 #include <esp_timer.h>
 #include <esp_arduino_version.h>
 
 // Setting for benchmark test parameters, modifiable from Serial
-uint32_t test_DurationS = 10;      // Total duration of the benchmark test in milliseconds
+uint32_t test_DurationS = 10;      // Total duration of the benchmark test in seconds
 const char command_Duration = 'D'; // Command to set the duration of the benchmark test
 const char command_Start = 'S';    // Command to start the benchmark test
 const char command_Stop = 'X';     // Command to stop the benchmark test
 
 // Configurable settings for the test
 // Sets the i2c_sensor_ReadingRateHz
-char command_ReadingRate = 'R'; // Command to set the reading rate of the benchmark test in Hz
+const char command_ReadingRate = 'R'; // Command to set the reading rate of the benchmark test in Hz
 // Sets the i2c_sensor_ClockHz
-char command_ClockHz = 'C'; // Command to set the clock speed of the benchmark
+const char command_ClockHz = 'C'; // Command to set the clock speed of the benchmark
 // Sets the i2c_sensor_TimeoutMs
-char command_TimeoutMs = 'T'; // Command to set the timeout of the benchmark test
+const char command_TimeoutMs = 'T'; // Command to set the timeout of the benchmark test
 
 // Settings for dummy motor I2C bus 1.
-// Typical: SDA = D4, SCL = D5, 400 MHz clock, 1 ms timeout, 100 Hz writing rate
+// Typical: SDA = D4, SCL = D5, 400 kHz clock, 1 ms timeout, 100 Hz writing rate
 uint8_t i2c_motor_SDA = D4;
 uint8_t i2c_motor_SCL = D5;
-uint8_t i2c_motor_ClockHz = 400000;
+uint32_t i2c_motor_ClockHz = 400000;
 uint8_t i2c_motor_TimeoutMs = 1;
 uint8_t i2c_motor_WritingRateHz = 100;
 
 // Settings for Line Sensor I2C bus 2.
-// Typical: SDA = D6, SCL = D7, 400 MHz clock, 1 ms timeout, 100 Hz reading rate
+// Typical: SDA = D6, SCL = D7, 400 kHz clock, 1 ms timeout, 100 Hz reading rate
 uint8_t i2c_sensor_SDA = D6;
 uint8_t i2c_sensor_SCL = D7;
-uint8_t i2c_sensor_ClockHz = 400000;
-uint8_t i2c_sensor_TimeoutMs = 1;
-uint8_t i2c_sensor_ReadingRateHz = 100;
+uint32_t i2c_sensor_ClockHz = 400000;
+uint16_t i2c_sensor_TimeoutMs = 1;
+uint32_t i2c_sensor_ReadingRateHz = 100;
 
 ///////////////////////////
 // Classes and global variables
 
 // Rename Wire bus for clarity as MotorBus
 TwoWire &Motor_Bus = Wire;
+MotorDriver motor_driver(Motor_Bus);
 TwoWire Sensor_Bus = TwoWire(1); // Manually instantiate Wire1 for Hardware Controller 1
 
+// Each run owns a fresh start timestamp and fixed-rate polling schedule.
+uint64_t testStartedAtUs = 0;
+uint64_t nextSensorReadAtUs = 0;
+uint64_t nextMotorWriteAtUs = 0;
+// Accumulate one serial command without waiting for more input.
+String serialCommandLine;
 bool test_Running = false; // Flag to indicate if the benchmark test is running
 
 //////////////////////////////
@@ -105,7 +112,7 @@ void readOnce(Statistics &stats)
 // Call only outside the timed I2C request path, to avoid affecting the benchmark.
 void printSummary(const Statistics &stats)
 {
-    Serial.printf("E3 END: %s\n", stats.reason);
+    Serial.printf("E6 END: %s\n", stats.reason);
     Serial.printf("Success: %lu / %lu (%.2f%%)\n", (unsigned long)stats.successes,
                   (unsigned long)stats.attempts, stats.attempts ? 100.0 * stats.successes / stats.attempts : 0.0);
     Serial.printf("Request time, all attempts: mean=%.2f us min=%llu us max=%llu us\n",
@@ -127,6 +134,8 @@ void printSummary(const Statistics &stats)
 void setup()
 {
     Serial.begin(115200);
+    delay(100);
+
     // Initialize the I2C buses for the sensor and motor
     if (!Sensor_Bus.begin(i2c_sensor_SDA, i2c_sensor_SCL, i2c_sensor_ClockHz))
     {
@@ -136,7 +145,7 @@ void setup()
     {
         Serial.println("Sensor_Bus initialized successfully");
     }
-    Sensor_Bus.setTimeout(i2c_sensor_TimeoutMs);
+    Sensor_Bus.setTimeOut(i2c_sensor_TimeoutMs);
 
     if (!Motor_Bus.begin(i2c_motor_SDA, i2c_motor_SCL, i2c_motor_ClockHz))
     {
@@ -146,59 +155,95 @@ void setup()
     {
         Serial.println("Motor_Bus initialized successfully");
     }
-    Motor_Bus.setTimeout(i2c_motor_TimeoutMs);
+    Motor_Bus.setTimeOut(i2c_motor_TimeoutMs);
+    motor_driver.initialize();
 }
 
+// Process complete CR/LF command lines and perform scheduled sensor requests.
 void loop()
 {
-    // Read Seral Command to set test parameters
-    // Parameters can only be set when test are not running, other prints back error
-    // Tests can be started and stopped with commands, and the duration can be set before starting the test
-
-    if (Serial.available())
+    while (Serial.available())
     {
-        char command = Serial.read();
+        const char receivedCharacter = Serial.read();
+        if (receivedCharacter != '\r' && receivedCharacter != '\n')
+        {
+            serialCommandLine += receivedCharacter;
+            continue;
+        }
+
+        // CR, LF and CRLF all terminate commands; blank lines do nothing.
+        serialCommandLine.trim();
+        if (serialCommandLine.isEmpty())
+            continue;
+        const char command = serialCommandLine.charAt(0);
+        // Numeric settings accept both D10 and D 10, for example.
+        const uint32_t parameterValue = serialCommandLine.substring(1).toInt();
+        serialCommandLine = "";
+
         switch (command)
         {
         case command_Duration:
+        case command_ReadingRate:
+        case command_ClockHz:
+        case command_TimeoutMs:
             if (test_Running)
             {
-                Serial.println("Cannot set duration while test is running");
+                Serial.println("Cannot change settings while test is running");
+                break;
+            }
+            if (command == command_Duration)
+            {
+                test_DurationS = parameterValue;
+                Serial.printf("Test duration set to %lu seconds\n", (unsigned long)test_DurationS);
+            }
+            else if (command == command_ReadingRate)
+            {
+                i2c_sensor_ReadingRateHz = parameterValue;
+                Serial.printf("Sensor reading rate set to %lu Hz\n", (unsigned long)i2c_sensor_ReadingRateHz);
+            }
+            else if (command == command_ClockHz)
+            {
+                // Apply the new clock to the initialized sensor controller.
+                if (Sensor_Bus.setClock(parameterValue))
+                {
+                    i2c_sensor_ClockHz = Sensor_Bus.getClock();
+                    Serial.printf("Sensor clock set to %lu Hz\n", (unsigned long)i2c_sensor_ClockHz);
+                }
+                else
+                    Serial.println("Failed to set sensor clock");
             }
             else
             {
-                // Read the duration value from Serial
-                while (!Serial.available())
-                    ; // Wait for input
-                test_DurationS = Serial.parseInt();
-                Serial.printf("Test duration set to %lu seconds\n", (unsigned long)test_DurationS);
+                i2c_sensor_TimeoutMs = parameterValue;
+                Sensor_Bus.setTimeOut(i2c_sensor_TimeoutMs);
+                Serial.printf("Sensor timeout set to %u ms\n", i2c_sensor_TimeoutMs);
             }
             break;
         case command_Start:
             if (test_Running)
-            {
                 Serial.println("Test is already running");
-            }
             else
             {
+                test_stats = Statistics{};
+                Serial.printf("E6 START duration=%lu s reading_rate=%lu Hz clock=%lu Hz timeout=%u ms\n",
+                              (unsigned long)test_DurationS, (unsigned long)i2c_sensor_ReadingRateHz,
+                              (unsigned long)i2c_sensor_ClockHz, i2c_sensor_TimeoutMs);
+                // Finish start logging before beginning the measurement window.
+                Serial.flush();
+                testStartedAtUs = esp_timer_get_time();
+                nextSensorReadAtUs = testStartedAtUs;
                 test_Running = true;
-                Serial.println("Starting test...");
-                // Start the benchmark test here
-                // ...
             }
             break;
         case command_Stop:
             if (!test_Running)
-            {
                 Serial.println("Test is not running");
-            }
             else
             {
                 test_Running = false;
-                Serial.println("Stopping test...");
-                // Stop the benchmark test here
-                // Print the summary of the test results
-                // ...
+                test_stats.elapsedUs = esp_timer_get_time() - testStartedAtUs;
+                test_stats.reason = "stopped by command";
+                printSummary(test_stats);
             }
             break;
         default:
@@ -207,30 +252,39 @@ void loop()
         }
     }
 
-    // Stop the test if the duration has been reached
-    if (test_Running)
+    if (!test_Running)
+        return;
+
+    const uint64_t currentTimeUs = esp_timer_get_time();
+    // Widen before multiplication so seconds cannot overflow a 32-bit product.
+    if (currentTimeUs - testStartedAtUs >= static_cast<uint64_t>(test_DurationS) * 1000000ULL)
     {
-        static unsigned long startTime = millis();
-        if (millis() - startTime >= test_DurationS * 1000)
-        {
-            test_Running = false;
-            Serial.println("Test duration reached, stopping test...");
-            // Stop the benchmark test here
-            // Print the summary of the test results
-            // ...
-        }
+        test_Running = false;
+        test_stats.elapsedUs = currentTimeUs - testStartedAtUs;
+        test_stats.reason = "duration reached";
+        printSummary(test_stats);
+        return;
     }
 
-    // Code to grab one sensor reading when polling time is due
-    if (test_Running)
+    // Round up the period so the integer schedule never exceeds the requested rate.
+    const uint64_t sensorReadingPeriodUs = (1000000ULL + i2c_sensor_ReadingRateHz - 1) / i2c_sensor_ReadingRateHz;
+    if (currentTimeUs >= nextSensorReadAtUs)
     {
-        static uint64_t lastReadTimeUs = 0;
-        uint64_t currentTimeUs = esp_timer_get_time();
-        if (currentTimeUs - lastReadTimeUs >= 1000000 / i2c_sensor_ReadingRateHz)
-        {
-            lastReadTimeUs = currentTimeUs;
-            // Read the sensor here
-            readOnce(test_stats);
-        }
+        // Keep the schedule anchored to the run start. Count missed slots instead
+        // of issuing catch-up bursts after slow requests or command processing.
+        const uint64_t missedSlots = (currentTimeUs - nextSensorReadAtUs) / sensorReadingPeriodUs;
+        test_stats.skippedSlots += missedSlots;
+        nextSensorReadAtUs += (missedSlots + 1) * sensorReadingPeriodUs;
+        readOnce(test_stats);
+    }
+
+    // Send dummy I2C write to motor driver via Motor_Bus
+    const uint64_t motorReadingPeriodUs = (1000000ULL + i2c_motor_WritingRateHz - 1) / i2c_motor_WritingRateHz;
+    if (currentTimeUs >= nextMotorWriteAtUs)
+    {
+        const uint64_t missedSlots = (currentTimeUs - nextMotorWriteAtUs) / motorReadingPeriodUs;
+        nextMotorWriteAtUs += (missedSlots + 1) * motorReadingPeriodUs;
+        // Perform the dummy I2C write to the motor driver here.
+        motor_driver.releaseMotorOutputs();
     }
 }
