@@ -1,35 +1,30 @@
 # LineSensor
 
-One header, `LineSensor.h`, refactored from the standalone E3 direct read.
-Construct inside `setup()`: `static LineSensor sensor(D6, D7, 200, 5);`.
-The arguments are SDA, SCL, request frequency (including retries) and maximum total attempts.
+A small header-only library using the direct read procedure tested in E6.
+The caller owns the bus, configures its pins, clock and timeout, and schedules reads.
 
-The constructor configures I2C controller 1, 1 MHz, a 1 ms requested Wire timeout,
-address 0x12 and register 0x30. Use Arduino 3.3.12 as pinned by E3/E4. The chosen
-pins must not be owned by another bus object. Use from one task.
+```cpp
+TwoWire sensorBus(1);
+LineSensor lineSensor(sensorBus);
 
-`tick()` returns `Status::Idle`, `Success` or `Failure`. It makes at most one
-physical request per call. Requests and retries respect the selected frequency:
-at 200 Hz, starts are at least 5000 us apart; the maximum is 1000 Hz.
-Rate 0 means the 1000 Hz maximum; values above 1000 are capped. Other rates use
-an integer period rounded up. Polls anchor to actual starts; there is no catch-up.
-Five attempts means the first request plus up to four retries. Retries are
-serviced by subsequent ticks, without sleeping in the library. Slow caller ticks
-reduce the actual rate and delay retries. Each I2C transaction remains blocking.
-After a batch succeeds or exhausts its attempts, the next poll follows the same
-request spacing. Call tick frequently enough to achieve the selected rate.
+// In setup():
+sensorBus.begin(D6, D7, 400000);
+sensorBus.setTimeOut(1);
 
-`reading()` returns `valid`, the original active-low `rawMask`, and dynamically
-calculated `ageUs`. Before success, valid=false and ageUs=UINT64_MAX. Failed
-requests retain the previous byte and timestamp. Age means time since successful
-communication, not the sensor's internal conversion age. Bit 7 is X1, bit 0 X8;
-zero denotes black. Filtering and edge/center estimation are deferred.
+// When a reading is due:
+uint8_t rawReading = 0;
+bool success = lineSensor.read(rawReading);
+```
 
-`ready()` reports successful bus initialization. `lastRequest()` supplies
-`startedAtUs`, `durationUs`, `transmitError` and the one-based attempt number for
-benchmarking. Inspect it only when tick returns Success or Failure.
+`read()` selects register `0x30` at address `0x12`, uses repeated START,
+and requests one byte with STOP. It returns true only when exactly one byte
+is received and available. Every failure returns false and leaves the output
+unchanged; incomplete receive data is discarded as in E6.
 
-The class does not print serial messages or automatically reset/recover hardware.
-The application's CORE_DEBUG_LEVEL=0 flag silences Arduino Wire diagnostics.
-E4 uses the same settings and physical-request statistics as E3, with retry
-counts, current reading age and minimum request-start gap added.
+Each call performs one blocking request. The library has no retries, polling
+schedule, statistics or serial output. The original active-low byte is returned
+unchanged: bit 7 is X1, bit 0 is X8, and zero denotes black. Call from one task.
+
+The E6 eight-hour run at 200 Hz, 400 kHz and a requested 1 ms timeout completed
+5,760,000 requests successfully. E4 separately measures the new library calls;
+that E6 result is not a hardware validation of this refactor.

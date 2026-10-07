@@ -1,17 +1,36 @@
-# E4 firmware - line sensor library
+# E4 firmware - line sensor library reliability
 
-Uses [LineSensor](../../lib/LineSensor/README.md), constructed with D6/D7.
-E3 remains the standalone reference. E4 uses Arduino 3.3.12 / ESP-IDF 5.5.5
-through the same pinned PlatformIO platform as E3.
+Uses [LineSensor](../../lib/LineSensor/README.md) with E6's bus configuration,
+CR/LF command parser and fixed-rate schedule. Defaults are 200 Hz, 400 kHz,
+a requested 1 ms I2C timeout and a 10-second duration. No test starts on boot.
 
-Current settings: 1000 Hz, five total attempts, 10 seconds per run, automatic
-repeat with a 1-second pause. The library fixes the bus clock at 1 MHz and the
-requested timeout at 1 ms. Send `r` to request a rerun. No Python runner is added.
+Send each command followed by CR, LF or CRLF. Empty lines are ignored.
 
-The benchmark counts physical requests, including retry failures. It reports
-request latency, success count, retry count, latest mask/age and minimum request
-start gap. Idle ticks do not count as requests. Timing is managed only by the
-library; the benchmark waits 5 us between Idle ticks.
+| Command | Responsibility |
+| --- | --- |
+| `D 28800` | Set test duration in seconds (eight hours here). |
+| `R 200` | Set sensor request frequency in Hz. |
+| `C 400000` | Set sensor I2C clock in Hz. |
+| `T 1` | Set sensor I2C timeout in milliseconds. |
+| `S` | Reset statistics and start the test. |
+| `X` | Stop the test and report results. |
 
-Build/upload: `platformio run -e e4_line_sensor_library -t upload --upload-port COM4`.
-Results: [test/E4_line_sensor_library](../../test/E4_line_sensor_library/README.md).
+Settings can only change while stopped. Supply positive reading rates and valid
+bus settings; timeout must fit a 16-bit millisecond value. Input validation
+is unchanged from E6.
+
+The firmware times each complete `lineSensor.read()` call, counts successful
+responses and reports success percentage, mean/minimum/maximum request time,
+successful-request mean, failure count and maximum failure time. It also reports
+elapsed time, achieved request rate, skipped slots and the last successful byte.
+All measurements and scheduling live in E4, outside the library. Each call is one
+attempt with no retries; missed polling slots do not trigger catch-up bursts.
+
+E4 preserves E6's dummy motor workload: controller 0 on D4/D5 at 400 kHz,
+1 ms timeout, baseline configuration on boot and zero-PWM writes at 100 Hz during
+the test. It commands no motion. Sensor controller 1 uses D6/D7.
+
+Build: `platformio run -e e4_line_sensor_library`.
+Upload and capture results using the existing project serial-port conventions.
+Historical measurements are unchanged. This firmware must be tested on hardware
+to compare its results with the eight-hour E6 run.
