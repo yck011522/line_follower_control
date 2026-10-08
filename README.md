@@ -1,5 +1,9 @@
 # ESP32 line-following robot controller
 
+[E7 manual-push data collection](src/e7_data_collection/README.md) records the E6
+raw line mask and calibrated M2/M4 encoder telemetry through ESP-NOW at a target
+100 Hz. It includes Wi-Fi/OTA support and an Enter/Ctrl-C Python CSV logger.
+
 Controller firmware and repeatable hardware experiments for four differential-drive toy cars on a reconfigurable game board. Each car uses an ESP32-S3, an eight-channel line sensor, an RC522 NFC reader, and a motor controller that handles wheel-speed regulation internally.
 
 The first development phase measures peripheral performance independently before integrating line following and wireless control. PlatformIO is the intended firmware build/upload tool; Python will automate uploads, test triggering, serial capture, and analysis on Windows.
