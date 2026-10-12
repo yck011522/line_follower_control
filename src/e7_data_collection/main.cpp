@@ -16,14 +16,19 @@
 // CONFIGURATION - network credentials and car identity come from platformio.ini.
 // =============================================================================
 
-const uint64_t controlPeriodUs = 10000; // One schedule for acquisition and sending.
-const uint32_t wifiConnectTimeoutMs = 20000;
-const size_t maximumMessageLength = 250; // Existing master forwards one text line.
+// Main Control Loop
+const uint64_t controlPeriodUs = 20000; // Target control frequency is 100 Hz, or 10 ms per loop.
 
-// Match the tested radio's static addressing and E6's two independent I2C buses.
-const IPAddress staticIpAddress(STATIC_IP_ADDRESS);
+// OTA settings
+const uint32_t wifiConnectTimeoutMs = 20000;
+const IPAddress staticOtaIp(STATIC_OTA_IP);
 const IPAddress gatewayAddress(GATEWAY_ADDRESS);
 const IPAddress subnetMask(255, 255, 255, 0);
+
+// Telemetry settings
+const size_t maximumMessageLength = 250; // Existing master forwards one text line.
+
+// Motor and Sensor I2C bus settings. 
 TwoWire &motorBus = Wire;
 TwoWire sensorBus(1);
 MotorDriver motorDriver(motorBus);
@@ -168,20 +173,20 @@ void setup()
     Serial.printf("E7 car=%u sensor_bus=%u motor_configured=%u PID=stored_unverified (3/0.375/0.5)\n",
                   unsigned(CAR_ID), unsigned(sensorBusReady), unsigned(motorConfigured));
 
-    // Copy the tested STA/static-IP setup, including disabling modem sleep.
-    // The AP chooses the radio channel; the existing master is fixed to 6.
-    WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false);
-    if (!WiFi.config(staticIpAddress, gatewayAddress, subnetMask))
-        Serial.println("E7 static IP setup failed.");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    // // Copy the tested STA/static-IP setup, including disabling modem sleep.
+    // // The AP chooses the radio channel; the existing master is fixed to 6.
+    // WiFi.mode(WIFI_STA);
+    // WiFi.setSleep(false);
+    // if (!WiFi.config(staticOtaIp, gatewayAddress, subnetMask))
+    //     Serial.println("E7 static IP setup failed.");
+    // WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-    // Bound the initial wait. A later connection enables OTA at the top of loop.
-    const uint32_t connectionStartedAtMs = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - connectionStartedAtMs < wifiConnectTimeoutMs)
-        delay(100);
-    Serial.printf("E7 WiFi=%u channel=%d MAC=%s\n", unsigned(WiFi.status() == WL_CONNECTED),
-                  WiFi.channel(), WiFi.macAddress().c_str());
+    // // Bound the initial wait. A later connection enables OTA at the top of loop.
+    // const uint32_t connectionStartedAtMs = millis();
+    // while (WiFi.status() != WL_CONNECTED && millis() - connectionStartedAtMs < wifiConnectTimeoutMs)
+    //     delay(100);
+    // Serial.printf("E7 WiFi=%u channel=%d MAC=%s\n", unsigned(WiFi.status() == WL_CONNECTED),
+    //               WiFi.channel(), WiFi.macAddress().c_str());
 
     // Create callback storage before registering callbacks; setup failures are
     // visible locally and acquisition can still run with the motors released.
@@ -206,12 +211,12 @@ void setup()
 // one schedule; missed slots are counted instead of issuing catch-up bursts.
 void loop()
 {
-    if (WiFi.status() == WL_CONNECTED && !otaInitialized)
-        initializeOta();
-    if (otaInitialized)
-        ArduinoOTA.handle();
-    if (otaInProgress)
-        return;
+    // if (WiFi.status() == WL_CONNECTED && !otaInitialized)
+    //     initializeOta();
+    // if (otaInitialized)
+    //     ArduinoOTA.handle();
+    // if (otaInProgress)
+    //     return;
 
     // Keep the 10 ms schedule anchored even when I2C or Wi-Fi takes too long.
     const uint64_t cycleStartedAtUs = esp_timer_get_time();
@@ -331,15 +336,23 @@ void loop()
     // Text protocol E7,version,car,... fits the existing master's newline bridge.
     // See README.md for the exact columns, timing definitions and invalid values.
     // -------------------------------------------------------------------------
+    // const int messageLength = snprintf(telemetryMessage, sizeof(telemetryMessage),
+    //     "E7,1,%u,%08lX,%lu,%llu,%lu,%d,%u,%ld,%lu,%.3f,%u,%ld,%lu,%.3f,%u,%u,%u,%lu,%lu,%lu,%lu,%lu",
+    //     unsigned(CAR_ID), (unsigned long)bootIdentifier, (unsigned long)currentSampleSequence,
+    //     (unsigned long long)cycleStartedAtUs, (unsigned long)lineReadOffsetUs, lineRawMask, unsigned(lineReadError),
+    //     (long)encoderCounts[0], (unsigned long)encoderReadOffsetsUs[0], wheelSpeedsMmPerSecond[0], unsigned(encoderReadErrors[0]),
+    //     (long)encoderCounts[1], (unsigned long)encoderReadOffsetsUs[1], wheelSpeedsMmPerSecond[1], unsigned(encoderReadErrors[1]),
+    //     unsigned(motorConfigured), unsigned(outputReleaseError), (unsigned long)acquisitionDurationUs,
+    //     (unsigned long)skippedControlSlots, (unsigned long)telemetryBusySkips, (unsigned long)telemetrySubmissionErrors,
+    //     (unsigned long)telemetryDeliveryFailures.load(std::memory_order_relaxed));
+
+    // Shorter message with only sensor and motor encoder
     const int messageLength = snprintf(telemetryMessage, sizeof(telemetryMessage),
-        "E7,1,%u,%08lX,%lu,%llu,%lu,%d,%u,%ld,%lu,%.3f,%u,%ld,%lu,%.3f,%u,%u,%u,%lu,%lu,%lu,%lu,%lu",
-        unsigned(CAR_ID), (unsigned long)bootIdentifier, (unsigned long)currentSampleSequence,
+        "E7,%u,%08lX,%lu,%llu,%lu,%d,%u,%ld,%ld",
+        unsigned(CAR_ID), (unsigned long)currentSampleSequence,
         (unsigned long long)cycleStartedAtUs, (unsigned long)lineReadOffsetUs, lineRawMask, unsigned(lineReadError),
-        (long)encoderCounts[0], (unsigned long)encoderReadOffsetsUs[0], wheelSpeedsMmPerSecond[0], unsigned(encoderReadErrors[0]),
-        (long)encoderCounts[1], (unsigned long)encoderReadOffsetsUs[1], wheelSpeedsMmPerSecond[1], unsigned(encoderReadErrors[1]),
-        unsigned(motorConfigured), unsigned(outputReleaseError), (unsigned long)acquisitionDurationUs,
-        (unsigned long)skippedControlSlots, (unsigned long)telemetryBusySkips, (unsigned long)telemetrySubmissionErrors,
-        (unsigned long)telemetryDeliveryFailures.load(std::memory_order_relaxed));
+        (long)encoderCounts[0], (long)encoderCounts[1]);
+
 
     // Reject oversize packets rather than forwarding a truncated CSV record.
     if (messageLength <= 0 || messageLength > int(maximumMessageLength))
