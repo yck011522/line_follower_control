@@ -1,0 +1,46 @@
+CAPTURE_STATUS: incomplete; gain-command hardware check
+
+HOST G
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+
+HOST G 18
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=18 dB
+
+HOST G 23
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=23 dB
+
+HOST G 33
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=33 dB
+
+HOST G 38
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=38 dB
+
+HOST G 43
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=43 dB
+
+HOST G 48
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=48 dB
+
+HOST G 99
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+
+HOST G bad
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+
+HOST G 43
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=43 dB
+E9B stopped; RF off=yes

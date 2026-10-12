@@ -68,7 +68,7 @@ bool NfcAsync::begin(const Options &options)
 {
     if (busy() || options.clockHz < 100000 || options.clockHz > 400000 ||
         options.rfTimeoutUs < 500 || options.rfTimeoutUs > 25000 || options.pollUs > 5000 ||
-        options.gain < 4 || options.gain > 7) return false;
+        options.gain > 7) return false;
     options_ = options;
     initialized_ = false;
     readyTag_ = false;
@@ -100,7 +100,7 @@ bool NfcAsync::begin(const Options &options)
     }
     if (!writeByte(0x08, 0x00) || !writeByte(0x0E, 0x00) || !configure(0x14, 0x83)) return false;
     delay(10); // Cold-tag power-up belongs to initialization, not steady-state read latency.
-    Serial.printf("INIT version=0x%02X clock=%lu timeout_us=%u\n", version,
+    if (options.logInitialization) Serial.printf("INIT version=0x%02X clock=%lu timeout_us=%u\n", version,
                   static_cast<unsigned long>(options.clockHz), options.rfTimeoutUs);
     transactions_ = 0;
     emptyFrames_ = 0;

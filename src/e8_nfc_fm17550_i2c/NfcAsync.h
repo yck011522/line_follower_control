@@ -17,6 +17,7 @@ public:
         bool fastTx = true;
         uint8_t gain = 6;
         bool combined = true;
+        bool logInitialization = true; // Applications may own their own guarded serial output.
     };
     // Configure the chip while the application is idle; this one-time setup may block.
     bool begin(const Options &options);
