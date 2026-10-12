@@ -1,4 +1,4 @@
-"""Capture one bounded E8 NFC test without pulsing the ESP32 reset lines."""
+"""Legacy E8 capture; use benchmark.py for the asynchronous firmware profiles."""
 import datetime
 import hashlib
 import pathlib
@@ -12,7 +12,9 @@ command = sys.argv[2].upper() if len(sys.argv) > 2 else "S"
 if command not in {"S", "R"}:
     raise SystemExit("Usage: capture.py [COM9] [S|R]")
 stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-path = pathlib.Path(__file__).parent / f"run_{stamp}_{port}.log"
+raw_folder = pathlib.Path(__file__).resolve().parents[2] / "src/e8_nfc_fm17550_i2c/results/raw"
+raw_folder.mkdir(parents=True, exist_ok=True)
+path = raw_folder / f"run_{stamp}_{port}.log"
 source = pathlib.Path(__file__).resolve().parents[2] / "src/e8_nfc_fm17550_i2c/main.cpp"
 source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
 connection = serial.Serial(port=None, baudrate=115200, timeout=0.2)

@@ -1,0 +1,26 @@
+STATUS: incomplete until capture ends
+
+E8 START: NFC only at 0x28, D4/D5, 100000 Hz; X cancels.
+Reader 0x28 VersionReg=0x88 (datasheet says 0xA1)
+DIAGNOSTIC raw pointer=0x00 value=0x00
+DIAGNOSTIC raw pointer=0x01 value=0x10
+DIAGNOSTIC raw pointer=0x02 value=0x80
+DIAGNOSTIC raw pointer=0x36 value=0x40
+DIAGNOSTIC raw pointer=0x6E value=0x00
+Reset not ready: CommandReg=0x1F; trying explicit wake/Idle
+After wake: CommandReg=0x10
+CONFIG reg=0x12 wrote=0x00 read=0x00
+CONFIG reg=0x13 wrote=0x00 read=0x00
+CONFIG reg=0x15 wrote=0x40 read=0x00
+CONFIG reg=0x16 wrote=0x10 read=0x10
+CONFIG reg=0x17 wrote=0x84 read=0x84
+CONFIG reg=0x11 wrote=0x3D read=0x3D
+CONFIG reg=0x2A wrote=0x80 read=0x00
+CONFIG reg=0x2B wrote=0xA9 read=0x00
+CONFIG reg=0x2C wrote=0x03 read=0x00
+CONFIG reg=0x2D wrote=0xE8 read=0x00
+Reader initialization failed.
+E8 END: result=FAILED cleanup=RF_OFF
+Send S to read again; X cancels a run.
+
+STATUS: capture completed (see E8 END for hardware result)

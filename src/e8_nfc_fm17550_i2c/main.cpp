@@ -1,272 +1,205 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include <utility>
+#include <esp_timer.h>
+#include "NfcAsync.h"
 
-constexpr uint8_t kAddress = 0x28;
-constexpr uint32_t kClockHz = 100000;
-constexpr uint8_t kExpectedUid[] = {0x11, 0xE5, 0x99, 0x23};
-bool busReady = false;
-bool cancelled = false;
-
-// Write one documented register on the NFC reader only; never scan the shared bus.
-bool writeReg(uint8_t reg, uint8_t value)
-{
-    Wire.beginTransmission(kAddress);
-    Wire.write(reg);
-    Wire.write(value);
-    const uint8_t error = Wire.endTransmission(true);
-    if (error) Serial.printf("I2C write reg=0x%02X error=%u\n", reg, error);
-    return error == 0;
+namespace {
+NfcAsync reader;
+constexpr uint8_t kReference[] = {0x11, 0xE5, 0x99, 0x23};
+constexpr size_t kSampleCapacity = 8192;
+struct Sample { uint32_t latencyUs; uint16_t maxServiceUs; uint8_t result; uint8_t match; uint8_t diagnostic[6]; };
+Sample samples[kSampleCapacity];
+uint32_t histogram[256]; // 4 us buckets; the final bucket includes all values >= 1020 us.
+size_t sampleCount = 0;
+uint32_t requests = 0, successes = 0, noTags = 0, protocolErrors = 0, busErrors = 0, mismatches = 0;
+uint32_t serviceCalls = 0, maxServiceUs = 0, maxReadServiceUs = 0, heartbeatCount = 0;
+uint32_t heartbeatMissed = 0, heartbeatMaxLateUs = 0;
+uint64_t serviceTotalUs = 0, benchmarkStartUs = 0, benchmarkEndUs = 0, readStartUs = 0;
+uint64_t nextHeartbeatUs = 0;
+uint64_t nextRequestUs = 0;
+uint32_t durationMs = 5000, heartbeatPeriodUs = 10000;
+uint32_t requestIntervalUs = 0;
+bool running = false;
+uint8_t lastUid[4] = {};
+String commandLine;
+NfcAsync::Options options;
 }
 
-// Read one register with a pointer write, STOP, then read as drawn in datasheet Figure 4-9.
-bool readReg(uint8_t reg, uint8_t &value)
+// Print available bounded experiments; no test or RF output begins just by opening USB.
+void printHelp()
 {
-    Wire.beginTransmission(kAddress);
-    Wire.write(reg);
-    const uint8_t error = Wire.endTransmission(true);
-    if (error) {
-        Serial.printf("I2C pointer reg=0x%02X error=%u\n", reg, error);
-        return false;
-    }
-    if (Wire.requestFrom(kAddress, static_cast<size_t>(1), true) != 1 || Wire.available() != 1) {
-        Serial.printf("I2C short read reg=0x%02X\n", reg);
-        while (Wire.available()) Wire.read();
-        return false;
-    }
-    value = static_cast<uint8_t>(Wire.read());
-    return true;
+    Serial.println("E8 ASYNC ready: NFC only 0x28 D4/D5; no motor or line-sensor commands.");
+    Serial.println("B duration_ms clock_hz adaptive poll_us rf_timeout_us burst cache heartbeat_us fast_tx gain combined interval_us");
+    Serial.println("Example: B 5000 400000 1 710 1000 1 1 10000 1 6 1 0");
+    Serial.println("S uses current settings; X cancels; H prints help. Init/summary are outside timed service.");
 }
 
-// Verify static configuration writes before enabling the RF field.
-bool configureReg(uint8_t reg, uint8_t value)
+// Attempt RF cleanup before reporting or dumping samples; preserve partial runs on cancellation.
+void finishBenchmark(const char *reason)
 {
-    uint8_t actual = 0;
-    if (!writeReg(reg, value) || !readReg(reg, actual)) return false;
-    Serial.printf("CONFIG reg=0x%02X wrote=0x%02X read=0x%02X\n", reg, value, actual);
-    return actual == value;
-}
-
-// Compute ISO14443A CRC with the 0x6363 preset, including low byte first on the wire.
-uint16_t crcA(const uint8_t *data, size_t length)
-{
-    uint16_t crc = 0x6363;
-    for (size_t i = 0; i < length; ++i) {
-        uint8_t value = data[i] ^ static_cast<uint8_t>(crc);
-        value ^= value << 4;
-        crc = (crc >> 8) ^ (uint16_t(value) << 8) ^ (uint16_t(value) << 3) ^ (value >> 4);
-    }
-    return crc;
-}
-
-// Print raw RF frames so failures can be diagnosed without losing measurement details.
-void printFrame(const char *label, const uint8_t *data, uint8_t length)
-{
-    Serial.print(label);
-    for (uint8_t i = 0; i < length; ++i) Serial.printf(" %02X", data[i]);
+    const uint64_t elapsedUs = esp_timer_get_time() - benchmarkStartUs;
+    const uint32_t transactions = reader.transactions();
+    const uint32_t emptyFrames = reader.emptyFrames();
+    running = false;
+    const bool stopped = reader.end();
+    Serial.printf("OPTIONS fast_tx=%u gain=%u empty_frames=%lu combined=%u interval_us=%lu\n", options.fastTx,
+                  options.gain, (unsigned long)emptyFrames, options.combined, (unsigned long)requestIntervalUs);
+    Serial.printf("SUMMARY {\"reason\":\"%s\",\"clock_hz\":%lu,\"adaptive\":%u,\"poll_us\":%u,\"rf_timeout_us\":%u,\"burst\":%u,\"cache\":%u,\"heartbeat_us\":%lu,\"elapsed_us\":%llu,\"requests\":%lu,\"uid_reads\":%lu,\"no_tag\":%lu,\"protocol_errors\":%lu,\"bus_errors\":%lu,\"mismatches\":%lu,\"samples\":%u,\"samples_dropped\":%lu,\"service_calls\":%lu,\"service_total_us\":%llu,\"max_service_us\":%lu,\"transactions\":%lu,\"heartbeat_count\":%lu,\"heartbeat_missed\":%lu,\"heartbeat_max_late_us\":%lu,\"cleanup\":\"%s\",\"last_uid\":\"%02X:%02X:%02X:%02X\"}\n",
+                  reason, (unsigned long)options.clockHz, options.adaptive, options.pollUs, options.rfTimeoutUs,
+                  options.burst, options.cachePointer, (unsigned long)heartbeatPeriodUs,
+                  (unsigned long long)elapsedUs, (unsigned long)requests, (unsigned long)successes,
+                  (unsigned long)noTags, (unsigned long)protocolErrors, (unsigned long)busErrors,
+                  (unsigned long)mismatches, unsigned(sampleCount), (unsigned long)(requests - sampleCount),
+                  (unsigned long)serviceCalls, (unsigned long long)serviceTotalUs, (unsigned long)maxServiceUs,
+                  (unsigned long)transactions, (unsigned long)heartbeatCount, (unsigned long)heartbeatMissed,
+                  (unsigned long)heartbeatMaxLateUs, stopped ? "RF_OFF" : "I2C_ERROR",
+                  lastUid[0], lastUid[1], lastUid[2], lastUid[3]);
+    // Serial output is intentionally deferred until RF and the benchmark have stopped.
+    Serial.println("SAMPLES latency_us,max_service_us,result,uid_match,discovery,irq,error,count,control,retries");
+    for (size_t i = 0; i < sampleCount; ++i)
+        Serial.printf("%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", (unsigned long)samples[i].latencyUs,
+                      samples[i].maxServiceUs, samples[i].result, samples[i].match,
+                      samples[i].diagnostic[0], samples[i].diagnostic[1], samples[i].diagnostic[2],
+                      samples[i].diagnostic[3], samples[i].diagnostic[4], samples[i].diagnostic[5]);
+    Serial.print("SERVICE_HIST_4US");
+    for (uint32_t bucket : histogram) Serial.printf(",%lu", (unsigned long)bucket);
     Serial.println();
+    Serial.printf("E8 END: result=%s cleanup=%s\n", reason, stopped ? "RF_OFF" : "I2C_ERROR");
 }
 
-// Accept X during a bounded run without waiting for a complete serial line.
-bool checkCancellation()
+// Initialize once outside the timing window, then let loop() drive every RF exchange asynchronously.
+void startBenchmark()
 {
-    while (Serial.available()) {
-        const char command = static_cast<char>(Serial.read());
-        if (command == 'x' || command == 'X') cancelled = true;
+    if (running) return;
+    Serial.printf("E8 START: async benchmark duration_ms=%lu; UID reference 11:E5:99:23\n", (unsigned long)durationMs);
+    if (!reader.begin(options)) {
+        const bool stopped = reader.end();
+        Serial.printf("E8 END: result=INIT_FAILED cleanup=%s\n", stopped ? "RF_OFF" : "I2C_ERROR");
+        return;
     }
-    return cancelled;
+    requests = successes = noTags = protocolErrors = busErrors = mismatches = 0;
+    serviceCalls = maxServiceUs = maxReadServiceUs = heartbeatCount = 0;
+    heartbeatMissed = heartbeatMaxLateUs = 0;
+    serviceTotalUs = 0;
+    sampleCount = 0;
+    memset(histogram, 0, sizeof(histogram));
+    memset(lastUid, 0, sizeof(lastUid));
+    benchmarkStartUs = esp_timer_get_time();
+    benchmarkEndUs = benchmarkStartUs + uint64_t(durationMs) * 1000;
+    nextHeartbeatUs = benchmarkStartUs + heartbeatPeriodUs;
+    nextRequestUs = benchmarkStartUs;
+    running = true;
 }
 
-// Attempt both cleanup writes even after an I2C error, stopping the command and RF output.
-bool stopReader()
+// Parse an explicit experiment; constrain every duration, bus speed, and timeout before touching hardware.
+void executeCommand(const String &command)
 {
-    const bool idle = writeReg(0x01, 0x00);
-    const bool fieldOff = writeReg(0x14, 0x80);
-    uint8_t actual = 0;
-    const bool verified = readReg(0x14, actual) && !(actual & 0x03);
-    return idle && fieldOff && verified;
+    if (command == "X" || command == "x") {
+        if (running) finishBenchmark("CANCELLED");
+        return;
+    }
+    if (running) return;
+    if (command == "H" || command == "h") { printHelp(); return; }
+    if (command == "S" || command == "s") { startBenchmark(); return; }
+    unsigned duration = 0, clock = 0, adaptive = 0, poll = 0, timeout = 0, burst = 0, cache = 0, beat = 0, fast = 0, gain = 0, combined = 0, interval = 0;
+    if (sscanf(command.c_str(), "B %u %u %u %u %u %u %u %u %u %u %u %u", &duration, &clock, &adaptive,
+               &poll, &timeout, &burst, &cache, &beat, &fast, &gain, &combined, &interval) != 12 || duration < 100 || duration > 120000 ||
+        clock < 100000 || clock > 400000 || adaptive > 1 || poll > 5000 || timeout < 500 ||
+        timeout > 25000 || burst > 1 || cache > 1 || beat < 100 || beat > 100000 || fast > 1 || gain < 4 || gain > 7 || combined > 1 || interval > 1000000) {
+        Serial.println("Invalid command/settings. Send H for help.");
+        return;
+    }
+    durationMs = duration;
+    options.clockHz = clock;
+    options.adaptive = adaptive;
+    options.pollUs = poll;
+    options.rfTimeoutUs = timeout;
+    options.burst = burst;
+    options.cachePointer = cache;
+    heartbeatPeriodUs = beat;
+    options.fastTx = fast;
+    options.gain = gain;
+    options.combined = combined;
+    requestIntervalUs = interval;
+    startBenchmark();
 }
 
-// Inspect documented registers without issuing reset or RF commands, useful after power cycling.
-void printDiagnostics()
+// This synthetic scheduling marker measures NFC-induced delay, not real motor-control workload.
+void serviceHeartbeat(uint64_t nowUs)
 {
-    Serial.println("E8 DIAGNOSTIC: read-only register snapshot at address 0x28");
-    bool success = busReady;
-    if (busReady) {
-        for (uint8_t reg : {uint8_t(0x00), uint8_t(0x01), uint8_t(0x04), uint8_t(0x06),
-                 uint8_t(0x07), uint8_t(0x14), uint8_t(0x15), uint8_t(0x2A),
-                 uint8_t(0x2B), uint8_t(0x2C), uint8_t(0x2D), uint8_t(0x37)}) {
-            uint8_t value = 0;
-            if (readReg(reg, value)) Serial.printf("REG 0x%02X = 0x%02X\n", reg, value);
-            else success = false;
-        }
-    }
-    Serial.printf("E8 END: result=%s (read-only; RF unchanged)\n", success ? "DIAGNOSTIC" : "I2C_ERROR");
+    if (nowUs < nextHeartbeatUs) return;
+    const uint32_t late = nowUs - nextHeartbeatUs;
+    heartbeatMaxLateUs = max(heartbeatMaxLateUs, late);
+    heartbeatMissed += late / heartbeatPeriodUs;
+    nextHeartbeatUs += uint64_t(late / heartbeatPeriodUs + 1) * heartbeatPeriodUs;
+    ++heartbeatCount;
 }
 
-// Exchange one short RF frame with a 25 ms chip timer and a separate 60 ms host deadline.
-// CRC is managed in software; the chip supplies ISO14443A parity and framing.
-bool transceive(const uint8_t *tx, uint8_t txLength, uint8_t txLastBits,
-                uint8_t *rx, uint8_t capacity, uint8_t &rxLength)
+// Service the reader once and consume only fresh, validated UID events; no serial printing in this path.
+void serviceBenchmark()
 {
-    rxLength = 0;
-    printFrame("TX:", tx, txLength);
-    if (!writeReg(0x01, 0x00) || !writeReg(0x04, 0x7F) ||
-        !writeReg(0x0A, 0x80) || !writeReg(0x0D, txLastBits)) return false;
-    for (uint8_t i = 0; i < txLength; ++i) {
-        if (!writeReg(0x09, tx[i])) return false; // FIFO entries use the same register address.
-    }
-    if (!writeReg(0x01, 0x0C) || !writeReg(0x0D, 0x80 | txLastBits)) return false;
-    uint8_t irq = 0, error = 0, control = 0, count = 0;
-    const uint32_t start = millis();
-    bool finished = false;
-    while (millis() - start < 60 && !checkCancellation()) {
-        if (!readReg(0x04, irq)) return false;
-        if (irq & 0x31) { // RxIRq, IdleIRq, or TimerIRq terminates the wait.
-            finished = true;
-            break;
-        }
-        delay(1);
-    }
-    if (!writeReg(0x0D, txLastBits) || !readReg(0x06, error) ||
-        !readReg(0x0A, count) || !readReg(0x0C, control) || !writeReg(0x01, 0x00)) return false;
-    count &= 0x7F;
-    Serial.printf("RX status: irq=0x%02X error=0x%02X FIFO=%u lastBits=%u elapsed=%lu ms\n",
-                  irq, error, count, control & 7, static_cast<unsigned long>(millis() - start));
-    if (!finished || cancelled || !(irq & 0x20) || error || count > capacity || !count || (control & 7)) return false;
-    for (uint8_t i = 0; i < count; ++i) {
-        if (!readReg(0x09, rx[i])) return false;
-    }
-    rxLength = count;
-    printFrame("RX:", rx, rxLength);
-    return true;
-}
-
-// Reset only the reader, configure documented 106 kbit/s Type A registers, then enable RF.
-bool initializeReader()
-{
-    uint8_t version = 0, command = 0;
-    if (!readReg(0x37, version)) return false;
-    Serial.printf("Reader 0x28 VersionReg=0x%02X (datasheet says 0xA1)\n", version);
-    if (!writeReg(0x01, 0x0F)) return false;
-    delay(10); // Allow reset and oscillator startup before checking readiness.
-    const uint32_t start = millis();
-    do {
-        if (!readReg(0x01, command)) return false;
-        if (!(command & 0x10) && !(command & 0x0F)) break;
-        delay(1);
-    } while (millis() - start < 100);
-    if (command & 0x1F) {
-        Serial.printf("Reset not ready: CommandReg=0x%02X; trying explicit wake/Idle\n", command);
-        if (!writeReg(0x01, 0x00)) return false;
-        delay(100);
-        if (!readReg(0x01, command)) return false;
-        Serial.printf("After wake: CommandReg=0x%02X\n", command);
-        if (command & 0x1F) {
-            Serial.println("FAIL: reader not ready; check module power/startup.");
-            return false;
-        }
-    }
-    // Use the Type A receiver settings that returned the reference UID on this module.
-    // Keep gain's reserved bits and demodulator timing bits at their reset values.
-    uint8_t demod = 0, gain = 0;
-    if (!readReg(0x19, demod) || !readReg(0x26, gain) ||
-        !configureReg(0x26, (gain & 0x8F) | 0x70) ||
-        !configureReg(0x19, demod & 0x1F) || !configureReg(0x18, 0x55)) return false;
-    bool configured = true;
-    for (const auto &setting : {std::pair<uint8_t, uint8_t>{0x12, 0x00}, {0x13, 0x00},
-             {0x15, 0x40}, {0x16, 0x10}, {0x17, 0x80}, {0x11, 0x3D},
-             {0x2A, 0x80}, {0x2B, 0xA9}, {0x2C, 0x03}, {0x2D, 0xE8}}) {
-        configured = configureReg(setting.first, setting.second) && configured;
-    }
-    if (!configured || !writeReg(0x08, 0x00) || !writeReg(0x0E, 0x00) || !configureReg(0x14, 0x83)) return false;
-    // 13.56 MHz / (2*169+1) * 25 ms = 1000 timer ticks.
-    delay(10); // Give the tag time to power up in the newly established RF field.
-    return true;
-}
-
-// Read a single four-byte UID, verify its BCC, and select it to verify the SAK CRC.
-// This identifies a tag without authenticating, reading protected blocks, or writing tag memory.
-bool readTag()
-{
-    uint8_t rx[16] = {}, length = 0;
-    const uint8_t wakeup[] = {0x26}; // REQA is seven bits; each run/retry resets the tag's RF power.
-    if (!transceive(wakeup, 1, 7, rx, sizeof(rx), length) || length != 2) return false;
-    const uint16_t atqa = uint16_t(rx[0]) | (uint16_t(rx[1]) << 8);
-    Serial.printf("ATQA=0x%04X\n", atqa);
-    const uint8_t anticollision[] = {0x93, 0x20};
-    if (!transceive(anticollision, 2, 0, rx, sizeof(rx), length) || length != 5) return false;
-    if (rx[0] == 0x88) {
-        Serial.println("Cascade UID encountered; this initial test supports four-byte UIDs only.");
-        return false;
-    }
-    if ((rx[0] ^ rx[1] ^ rx[2] ^ rx[3]) != rx[4]) {
-        Serial.println("FAIL: UID BCC mismatch.");
-        return false;
-    }
-    uint8_t select[] = {0x93, 0x70, rx[0], rx[1], rx[2], rx[3], rx[4], 0, 0};
-    const uint16_t crc = crcA(select, 7);
-    select[7] = static_cast<uint8_t>(crc);
-    select[8] = crc >> 8;
-    if (!transceive(select, sizeof(select), 0, rx, sizeof(rx), length) || length != 3) return false;
-    const uint16_t sakCrc = crcA(rx, 1);
-    if (rx[1] != uint8_t(sakCrc) || rx[2] != uint8_t(sakCrc >> 8) || (rx[0] & 0x04)) {
-        Serial.println("FAIL: SAK CRC/cascade validation.");
-        return false;
-    }
-    Serial.printf("TAG UID=%02X:%02X:%02X:%02X ATQA=0x%04X SAK=0x%02X BCC=OK CRC=OK\n",
-                  select[2], select[3], select[4], select[5], atqa, rx[0]);
-    bool expected = atqa == 0x0004 && rx[0] == 0x08;
-    for (uint8_t i = 0; i < 4; ++i) expected = expected && select[i + 2] == kExpectedUid[i];
-    Serial.println(expected ? "PASS: UID, ATQA and SAK match phone." : "Tag read successfully; values differ from phone reference.");
-    return true;
-}
-
-// Run at most ten tag attempts on an explicit S command, with cleanup on every exit.
-void runTest()
-{
-    Serial.println("\nE8 START: NFC only at 0x28, D4/D5, 100000 Hz; X cancels.");
-    cancelled = false;
-    bool success = false;
-    if (busReady && initializeReader()) {
-        const uint32_t start = millis();
-        for (unsigned attempt = 1; attempt <= 10 && millis() - start < 5000 && !checkCancellation(); ++attempt) {
-            Serial.printf("Attempt %u\n", attempt);
-            if (readTag()) {
-                success = true;
-                break;
+    const uint64_t nowUs = esp_timer_get_time();
+    serviceHeartbeat(nowUs);
+    if (nowUs >= benchmarkEndUs) { finishBenchmark("COMPLETED"); return; }
+    if (!reader.busy()) {
+        uint8_t uid[4] = {};
+        const NfcAsync::Result result = reader.takeResult(uid);
+        if (result != NfcAsync::Result::None) {
+            ++requests;
+            const uint32_t latency = nowUs - readStartUs;
+            bool match = false;
+            if (result == NfcAsync::Result::Uid) {
+                ++successes;
+                memcpy(lastUid, uid, 4);
+                match = memcmp(uid, kReference, 4) == 0;
+                if (!match) ++mismatches;
+            } else if (result == NfcAsync::Result::NoTag) ++noTags;
+            else if (result == NfcAsync::Result::ProtocolError) ++protocolErrors;
+            else if (result == NfcAsync::Result::BusError) ++busErrors;
+            if (sampleCount < kSampleCapacity) {
+                samples[sampleCount] = {latency, uint16_t(min(maxReadServiceUs, uint32_t(65535))), uint8_t(result), uint8_t(match), {}};
+                reader.diagnostics(samples[sampleCount].diagnostic);
+                ++sampleCount;
             }
-            // Power-cycle the RF field between attempts so a partially selected tag returns to IDLE.
-            if (!stopReader()) break;
-            delay(5); // Hold RF off long enough to reset the tag before reapplying power.
-            if (!writeReg(0x14, 0x83)) break;
-            delay(20);
+            if (result == NfcAsync::Result::BusError) { finishBenchmark("BUS_ERROR"); return; }
         }
-    } else Serial.println("Reader initialization failed.");
-    const bool stopped = busReady && stopReader();
-    Serial.printf("E8 END: result=%s cleanup=%s\n", cancelled ? "CANCELLED" : success ? "TAG_READ" : "FAILED",
-                  stopped ? "RF_OFF" : "I2C_ERROR");
-    Serial.println("Send S to read again; R prints registers; X cancels a run.");
+        if (nowUs >= nextRequestUs && reader.startRead()) {
+            readStartUs = nowUs; maxReadServiceUs = 0;
+            nextRequestUs = nowUs + requestIntervalUs;
+        }
+    }
+    if (!reader.busy()) return; // No NFC service work or measurements between scheduled requests.
+    const uint64_t start = esp_timer_get_time();
+    reader.service(start);
+    const uint32_t elapsed = esp_timer_get_time() - start;
+    ++serviceCalls;
+    serviceTotalUs += elapsed;
+    maxServiceUs = max(maxServiceUs, elapsed);
+    maxReadServiceUs = max(maxReadServiceUs, elapsed);
+    ++histogram[min(elapsed / 4, uint32_t(255))];
 }
 
-// Initialize USB and the shared bus without probing or configuring any other device.
+// USB and I2C are idle at boot; the reader initializes only after an explicit serial command.
 void setup()
 {
     Serial.begin(115200);
     const uint32_t start = millis();
     while (!Serial && millis() - start < 5000) delay(10);
-    busReady = Wire.begin(D4, D5, kClockHz);
-    Wire.setTimeOut(20);
-    Serial.println("E8 NFC ready: only address 0x28. S reads tag; R prints registers; X cancels.");
+    Wire.begin(D4, D5, 400000);
+    Wire.setTimeOut(2);
+    commandLine.reserve(120);
+    printHelp();
 }
 
-// Remain idle until an explicit read request; no motor commands exist in this firmware.
+// Serial parsing is nonblocking; the control marker runs between individual NFC bus transactions.
 void loop()
 {
-    if (Serial.available()) {
-        const char command = static_cast<char>(Serial.read());
-        if (command == 's' || command == 'S') runTest();
-        if (command == 'r' || command == 'R') printDiagnostics();
+    while (Serial.available()) {
+        const char value = static_cast<char>(Serial.read());
+        if (value == '\n' || value == '\r') {
+            if (commandLine.length()) { executeCommand(commandLine); commandLine = ""; }
+        } else if (commandLine.length() < 119) commandLine += value;
+        else commandLine = "";
     }
-    delay(10);
+    if (running) serviceBenchmark();
+    else delay(1);
 }

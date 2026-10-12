@@ -1,0 +1,410 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-12",
+  "raw_log_count": 50,
+  "curated_count": 10,
+  "archived_count": 40,
+  "archive_sha256": "691f07eb7907f29c22176ae4a3ea703042ba0dad232330fadd0a1e2871aa0144",
+  "records": [
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_185731_COM9.log",
+      "name": "run_20261012_185731_COM9.log",
+      "size_bytes": 452,
+      "sha256": "20d4aaab4e35d69a4ad6b1436f10f2998c9bc3c5243bfcd3dc9f15fe89634d74",
+      "location": "archive/iterations.zip#initial/run_20261012_185731_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191132_COM9.log",
+      "name": "run_20261012_191132_COM9.log",
+      "size_bytes": 348,
+      "sha256": "69f56d7930fd320867b996cd9476550e5d7ddb6328fc928a7aa317048cc8b140",
+      "location": "archive/iterations.zip#initial/run_20261012_191132_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191257_COM9.log",
+      "name": "run_20261012_191257_COM9.log",
+      "size_bytes": 543,
+      "sha256": "dae9870f5e923b39184d535f053bdb6adf3af5fec44563f73cfce11fd63cb606",
+      "location": "archive/iterations.zip#initial/run_20261012_191257_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191341_COM9.log",
+      "name": "run_20261012_191341_COM9.log",
+      "size_bytes": 543,
+      "sha256": "dae9870f5e923b39184d535f053bdb6adf3af5fec44563f73cfce11fd63cb606",
+      "location": "archive/iterations.zip#initial/run_20261012_191341_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191443_COM9.log",
+      "name": "run_20261012_191443_COM9.log",
+      "size_bytes": 709,
+      "sha256": "3650b2339a986fc03a9c0ded1ed98644e762fd316639d2bcaec166cb5ff52de2",
+      "location": "archive/iterations.zip#initial/run_20261012_191443_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191601_COM9.log",
+      "name": "run_20261012_191601_COM9.log",
+      "size_bytes": 968,
+      "sha256": "c5c5a10002f13ac8efe5fd21bb93b9770e1b3df72d98157756fb67a1195fb8b8",
+      "location": "raw/run_20261012_191601_COM9.log",
+      "purpose": "Startup failure and configuration write-retention evidence"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_191829_COM9.log",
+      "name": "run_20261012_191829_COM9.log",
+      "size_bytes": 1859,
+      "sha256": "999b2ee4ae5df0ca32aa18d2b2b571f81da4058483fc6f73f293168f3d708b3d",
+      "location": "archive/iterations.zip#initial/run_20261012_191829_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_192049_486316_COM9.log",
+      "name": "run_20261012_192049_486316_COM9.log",
+      "size_bytes": 497,
+      "sha256": "3308272e0b91c7c140546bd694bd9c12a99fec8996cac37defdbc32dd487f74f",
+      "location": "archive/iterations.zip#initial/run_20261012_192049_486316_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_192210_029669_COM9.log",
+      "name": "run_20261012_192210_029669_COM9.log",
+      "size_bytes": 571,
+      "sha256": "cdcce3729c67a2071ef273bbf233bc8474f3acf940bb2c37055cc9c7ec3c83ab",
+      "location": "archive/iterations.zip#initial/run_20261012_192210_029669_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_200445_236192_COM9.log",
+      "name": "run_20261012_200445_236192_COM9.log",
+      "size_bytes": 497,
+      "sha256": "b22b770d707254d5ff0bc9b439763de5f321f27e387103de071b4a259bf12585",
+      "location": "archive/iterations.zip#initial/run_20261012_200445_236192_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_200501_892966_COM9.log",
+      "name": "run_20261012_200501_892966_COM9.log",
+      "size_bytes": 1616,
+      "sha256": "a6899a0994a87e5c5f4ae9bcfc35c1a6b62463d6e81a87b0afe94297b16f0257",
+      "location": "archive/iterations.zip#initial/run_20261012_200501_892966_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_200700_459224_COM9.log",
+      "name": "run_20261012_200700_459224_COM9.log",
+      "size_bytes": 1669,
+      "sha256": "c4e5da9858859a0f154673af67b796c4ccacdca21347074741fea07fa84d2e86",
+      "location": "archive/iterations.zip#initial/run_20261012_200700_459224_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_200816_806603_COM9.log",
+      "name": "run_20261012_200816_806603_COM9.log",
+      "size_bytes": 1316,
+      "sha256": "a23198554d46ca7d0dc2965057b3a1bd1373ded9a102784024d473c8c0069a6d",
+      "location": "archive/iterations.zip#initial/run_20261012_200816_806603_COM9.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/run_20261012_200832_972531_COM9.log",
+      "name": "run_20261012_200832_972531_COM9.log",
+      "size_bytes": 1316,
+      "sha256": "a23198554d46ca7d0dc2965057b3a1bd1373ded9a102784024d473c8c0069a6d",
+      "location": "raw/run_20261012_200832_972531_COM9.log",
+      "purpose": "Original successful UID/ATQA/SAK exchange"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_202827_016364.log",
+      "name": "run_20261012_202827_016364.log",
+      "size_bytes": 5988,
+      "sha256": "7dc1f055b8585f8f18554f33c08ab65b3968a3c2f4fc3de0b2e456d13711047e",
+      "location": "raw/run_20261012_202827_016364.log",
+      "purpose": "100 kHz asynchronous baseline"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_202842_290518.log",
+      "name": "run_20261012_202842_290518.log",
+      "size_bytes": 25199,
+      "sha256": "dbdd8fa9925ae2af777535c1a7e9d416110a6c4b3dbe21c913e4e07af647e6e2",
+      "location": "archive/iterations.zip#async/run_20261012_202842_290518.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203047_709394.log",
+      "name": "run_20261012_203047_709394.log",
+      "size_bytes": 48765,
+      "sha256": "6489f59f574df14b6b68cfb8d467ff1e20ecc0cfa47ba550163f0f9193a91949",
+      "location": "archive/iterations.zip#async/run_20261012_203047_709394.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203320_948312.log",
+      "name": "run_20261012_203320_948312.log",
+      "size_bytes": 45804,
+      "sha256": "c1ec98200cadf5b76d625870d22daa4594fca378264c2051d0a10c30b5470ace",
+      "location": "archive/iterations.zip#async/run_20261012_203320_948312.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203450_382295.log",
+      "name": "run_20261012_203450_382295.log",
+      "size_bytes": 50172,
+      "sha256": "3f0f90380e66f4721040c5c9b3ae4897243ba5c7df647f4374b3cd57aa0a1e32",
+      "location": "archive/iterations.zip#async/run_20261012_203450_382295.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203456_919291.log",
+      "name": "run_20261012_203456_919291.log",
+      "size_bytes": 40676,
+      "sha256": "51ec1a059d8980187e5c30071561ab165077d336f3d7932f8b25f478513dd6a4",
+      "location": "archive/iterations.zip#async/run_20261012_203456_919291.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203523_602815.log",
+      "name": "run_20261012_203523_602815.log",
+      "size_bytes": 50208,
+      "sha256": "c22be2b154e39479bafb34cd14da979c66e8a04a0f6ce203487de99df406f247",
+      "location": "archive/iterations.zip#async/run_20261012_203523_602815.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203530_166618.log",
+      "name": "run_20261012_203530_166618.log",
+      "size_bytes": 49202,
+      "sha256": "1230f1bf626cf14bad25d5af2f9c45fab1d42ce9c36613afa09a07ff3a78bc20",
+      "location": "archive/iterations.zip#async/run_20261012_203530_166618.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_203918_957945.log",
+      "name": "run_20261012_203918_957945.log",
+      "size_bytes": 60771,
+      "sha256": "eaab0e26ddbf0e88358314f09355bdfd6343ee9c805e44253490489dfb647e76",
+      "location": "archive/iterations.zip#async/run_20261012_203918_957945.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204008_943401.log",
+      "name": "run_20261012_204008_943401.log",
+      "size_bytes": 54901,
+      "sha256": "e704f2686fb9c81931a0a6eadc5d08eec8492207e6a8412868cb908e54c5a6b0",
+      "location": "archive/iterations.zip#async/run_20261012_204008_943401.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204015_504201.log",
+      "name": "run_20261012_204015_504201.log",
+      "size_bytes": 60318,
+      "sha256": "12c2b837f99fca14cd2a1c85bb889e0fb6f753b23db1533c8646f4d2e3ef688c",
+      "location": "archive/iterations.zip#async/run_20261012_204015_504201.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204022_048267.log",
+      "name": "run_20261012_204022_048267.log",
+      "size_bytes": 55368,
+      "sha256": "5bd86617ba5f1815f14b7bf1fdc83282260e1c89e69246d143f0623d25750277",
+      "location": "archive/iterations.zip#async/run_20261012_204022_048267.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204318_654126.log",
+      "name": "run_20261012_204318_654126.log",
+      "size_bytes": 63323,
+      "sha256": "0f2829ae9cf2af8852f1795a8c075fb57438ad8ac6313a0c5bdf744fb85c5f14",
+      "location": "raw/run_20261012_204318_654126.log",
+      "purpose": "48 dB gain comparison and empty-frame retries"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204325_237011.log",
+      "name": "run_20261012_204325_237011.log",
+      "size_bytes": 65653,
+      "sha256": "83c9516df184dfce627b673ad91f526fc0a1385fbfa641ef4a92d60b4a3c2523",
+      "location": "raw/run_20261012_204325_237011.log",
+      "purpose": "43 dB gain comparison with no rejected outcomes"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204331_801150.log",
+      "name": "run_20261012_204331_801150.log",
+      "size_bytes": 65653,
+      "sha256": "22ab90c7dee183cc503cf13ee03041efc4f28339a38685a91d1988df1d3cb108",
+      "location": "archive/iterations.zip#async/run_20261012_204331_801150.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204412_762712.log",
+      "name": "run_20261012_204412_762712.log",
+      "size_bytes": 63927,
+      "sha256": "8ab53b7638f431957742931a8e07c1bb9e89ea76123ea6f17df1e89452da2b27",
+      "location": "archive/iterations.zip#async/run_20261012_204412_762712.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204419_356572.log",
+      "name": "run_20261012_204419_356572.log",
+      "size_bytes": 65909,
+      "sha256": "214bc644544d6248a5445b5e9cc04dd05b30b03102d78098ebd9bd1a24c0591a",
+      "location": "archive/iterations.zip#async/run_20261012_204419_356572.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204425_932075.log",
+      "name": "run_20261012_204425_932075.log",
+      "size_bytes": 55727,
+      "sha256": "f7c51007fa358ebf5443d64c8d3e70b48a1fa86579feebd454985bbf3ad9864f",
+      "location": "archive/iterations.zip#async/run_20261012_204425_932075.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204722_245915.log",
+      "name": "run_20261012_204722_245915.log",
+      "size_bytes": 71482,
+      "sha256": "d2a16dc1d41cbdf8258a6b67e893f2443f69ed10930a5ed7bc5169edfaef1b53",
+      "location": "archive/iterations.zip#async/run_20261012_204722_245915.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204728_909917.log",
+      "name": "run_20261012_204728_909917.log",
+      "size_bytes": 69493,
+      "sha256": "c45867445abe163e7dd1d5ad7d4d9f52851f67aac1f21db2e4a7a0bf95a714c0",
+      "location": "archive/iterations.zip#async/run_20261012_204728_909917.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204843_673702.log",
+      "name": "run_20261012_204843_673702.log",
+      "size_bytes": 59835,
+      "sha256": "80b8d0e05a2e91387de2bcf7d681ee3d371ba69b6575cd7313f5545060f76f38",
+      "location": "archive/iterations.zip#async/run_20261012_204843_673702.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204850_283658.log",
+      "name": "run_20261012_204850_283658.log",
+      "size_bytes": 57511,
+      "sha256": "622276ad91e5cfe4f303463d6d80d79bbf07aca34630a5434c320f0d40984410",
+      "location": "archive/iterations.zip#async/run_20261012_204850_283658.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204856_832469.log",
+      "name": "run_20261012_204856_832469.log",
+      "size_bytes": 71002,
+      "sha256": "763334d314813eb37d26a20a63e3a3f451d6680dd460b72a09bb5780a0e1fdd8",
+      "location": "archive/iterations.zip#async/run_20261012_204856_832469.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_204903_411667.log",
+      "name": "run_20261012_204903_411667.log",
+      "size_bytes": 71426,
+      "sha256": "17aa5f76acecae4e79643e471f5627e09b352f002497e20660a654b9cf163804",
+      "location": "archive/iterations.zip#async/run_20261012_204903_411667.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205037_741250.log",
+      "name": "run_20261012_205037_741250.log",
+      "size_bytes": 56448,
+      "sha256": "aa79685ea16315bd29c4fe81314e621ae722c949da57941f0133a8d699adeee7",
+      "location": "archive/iterations.zip#async/run_20261012_205037_741250.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205044_311370.log",
+      "name": "run_20261012_205044_311370.log",
+      "size_bytes": 56840,
+      "sha256": "bf6cefe8b861454a1703a9830a8b2b8d19acebd1f3d1e07ff0d884b56e640c03",
+      "location": "archive/iterations.zip#async/run_20261012_205044_311370.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205050_890859.log",
+      "name": "run_20261012_205050_890859.log",
+      "size_bytes": 29815,
+      "sha256": "d463f2813f4bf76134e82c8f5f3aada4d52d222a5923d8ea8fd3b5caace85dc7",
+      "location": "archive/iterations.zip#async/run_20261012_205050_890859.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205211_334310.log",
+      "name": "run_20261012_205211_334310.log",
+      "size_bytes": 72349,
+      "sha256": "4c436f1bdae0610c698e99e9d312e9801c1a47c7bdb18363c478654a315e0ed4",
+      "location": "archive/iterations.zip#async/run_20261012_205211_334310.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205217_915318.log",
+      "name": "run_20261012_205217_915318.log",
+      "size_bytes": 71783,
+      "sha256": "935c48b06b89c5b0ab72c50502fdb6c0c00e54c1812876851bae5f0336835c68",
+      "location": "archive/iterations.zip#async/run_20261012_205217_915318.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205224_475687.log",
+      "name": "run_20261012_205224_475687.log",
+      "size_bytes": 71695,
+      "sha256": "18c0e13301a4414d9267d67917bddd3034acfc053ac5ee491124632170731ced",
+      "location": "archive/iterations.zip#async/run_20261012_205224_475687.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205231_071975.log",
+      "name": "run_20261012_205231_071975.log",
+      "size_bytes": 71282,
+      "sha256": "fdd1c79ee7996eb689b65a78f2c215e393b55d66658a779845c77af1c71ebfd3",
+      "location": "archive/iterations.zip#async/run_20261012_205231_071975.log",
+      "purpose": "Historical iteration; retained for provenance"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205650_227870.log",
+      "name": "run_20261012_205650_227870.log",
+      "size_bytes": 142975,
+      "sha256": "da85bb5f03f3cd0c1aaaddb24b6a59ed0b220c6c066046157cb707a854f45e62",
+      "location": "raw/run_20261012_205650_227870.log",
+      "purpose": "Final saturation verification 1"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205701_115787.log",
+      "name": "run_20261012_205701_115787.log",
+      "size_bytes": 143003,
+      "sha256": "cf98a74b0726f7bd115d4b0e45c2ce06c6caa7edb2097d337199259128670c07",
+      "location": "raw/run_20261012_205701_115787.log",
+      "purpose": "Final saturation verification 2"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205712_003475.log",
+      "name": "run_20261012_205712_003475.log",
+      "size_bytes": 143003,
+      "sha256": "4e498ba3c45c513dd6cf12f5f3e4e802b64da17f70a74766032f3b93102045ad",
+      "location": "raw/run_20261012_205712_003475.log",
+      "purpose": "Final saturation verification 3"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205822_478645.log",
+      "name": "run_20261012_205822_478645.log",
+      "size_bytes": 29899,
+      "sha256": "fb5042da45b0c4a3032254d4e9258ea0a9b26d1ea6bec86743170493834e2472",
+      "location": "raw/run_20261012_205822_478645.log",
+      "purpose": "Final 100 Hz request verification"
+    },
+    {
+      "original_path": "test/E8_nfc_communication/async/run_20261012_205939_775731.log",
+      "name": "run_20261012_205939_775731.log",
+      "size_bytes": 4593,
+      "sha256": "cc8349652108b35ddd50dc70cd81351ab6e33523a71eef74b0c845fbe3797fd9",
+      "location": "raw/run_20261012_205939_775731.log",
+      "purpose": "Final cancellation and RF-off verification"
+    }
+  ]
+}

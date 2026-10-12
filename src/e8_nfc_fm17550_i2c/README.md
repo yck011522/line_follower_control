@@ -1,112 +1,140 @@
-# E8 NFC I2C tag test
+# E8 asynchronous NFC UID reader
 
-XIAO ESP32-S3 D4 / D5 are GPIO5 / GPIO6. The shared bus runs at 100 kHz,
-with a 20 ms transaction timeout and USB serial at 115200 baud.
-All I2C transactions target only the NFC reader's 7-bit address **0x28**.
-The line sensor at 0x12 is not probed, read, or configured.
+The firmware now uses `NfcAsync.h` / `NfcAsync.cpp` for cooperative UID reads.
+Only NFC address **0x28** is accessed. D4 / D5 are GPIO5 / GPIO6 on the XIAO
+ESP32-S3. The line sensor at 0x12 and the motor driver are not addressed.
 
-The tag is now read successfully. The final firmware matched the phone's UID,
-ATQA, and SAK on two consecutive runs, each succeeding on its first attempt.
-Both runs validated BCC and SAK CRC and verified RF-off cleanup.
+Final tag-present results on COM9, 2026-10-12: approximately **504 fresh UID
+reads/s**, median **1.984 ms**, p99 **1.993 ms**, and longest measured service
+call **271 us**. Three ten-second runs returned **15,116 / 15,116** matching
+UIDs with no published protocol/bus errors or UID mismatches. One rejected empty
+RF frame recovered through a bounded retry. A separate 100 Hz request run
+returned **1,000 / 1,000** matching UIDs. See the
+[benchmark report](results/README.md) for raw logs,
+comparisons, timing definitions, and limits. [FINDINGS.md](FINDINGS.md) records
+the startup investigation and the changes that made UID reading faster.
 
-The firmware waits for an explicit serial command:
+## Reader API and scheduling
 
-- `S`: reset/wake the reader, verify Type A settings, and attempt a four-byte UID read.
-- `R`: read-only register snapshot, useful immediately after a full power cycle.
-- `X`: cancel an active test. No motor commands exist in this firmware.
+1. Initialize `Wire` on D4/D5, then call `reader.begin(NfcAsync::Options{})`
+   once while the application is idle. Configuration/reset and the cold-tag
+   power-up guard are blocking initialization work.
+2. Call `reader.startRead()` to schedule a read; this function performs no I2C.
+3. Call `reader.service(esp_timer_get_time())` frequently from the fast Arduino
+   loop while `reader.busy()` is true. Each call advances at most one I2C
+   operation or returns immediately while waiting for RF. There are no RF wait
+   loops or `delay()` calls in `service()`.
+4. Consume `reader.takeResult(uid)`. Use the four UID bytes **only** when the
+   result is `NfcAsync::Result::Uid`. `NoTag`, `ProtocolError`, and `BusError`
+   never publish an old UID as a fresh detection. A bus error requires ending
+   the session and reinitializing while idle.
+5. `reader.end()` cancels pending work, attempts Idle/RF-off, and checks the
+   antenna-enable bits. It returns false when bus failure prevents verified
+   cleanup. End/reset are session operations, not normal per-read operations.
 
-A read uses seven-bit REQA, cascade-level-1 anticollision, BCC validation,
-and SELECT with software CRC_A. It validates the SAK response CRC and prints
-UID, ATQA, and SAK. The phone reference is UID `11:E5:99:23`, ATQA `0x0004`,
-SAK `0x08`. This initial implementation supports one four-byte-UID tag,
-reports collisions as errors, and does not authenticate or access tag memory.
-A successful UID read therefore does not imply that protected MIFARE blocks
-have been read. No tag memory writes are issued.
+Schedule control work every 10 ms independently of NFC servicing. Call service
+between those control updates; calling it only once per 10 ms will still avoid
+RF blocking, but will spread one UID read over many control periods. Do not put
+`delay(10)` after every state-machine step if approximately 2 ms UID delivery
+is wanted. The same main-loop thread can use the shared bus for other devices
+between NFC operations; this class must be the sole owner of NFC address 0x28.
+The shared bus clock applies to every device on that bus.
 
-The RF test is limited to ten attempts and a five-second attempt-loop deadline,
-with an independent 60 ms RF-response deadline. Initialization and I2C cleanup
-have their own bounded waits. Every exit attempts Idle and RF-off writes;
-`cleanup=RF_OFF` requires readback of disabled antenna bits. Bus failure can
-prevent cleanup, in which case the firmware reports `I2C_ERROR`.
+`Wire` transfers are synchronous: this is asynchronous **RF waiting**, not a
+zero-blocking I2C implementation. Combined register reads include a pointer
+write and repeated START/read in one driver operation. The longest observed
+call was 0.271 ms; the configured I2C fault timeout is 2 ms, not an absolute
+real-time guarantee for application scheduling. The benchmark's control
+heartbeat is a synthetic scheduling marker, not a real motor/PID workload.
 
-The supplied FM17550 datasheet sections 3.2 and 4.4 define the register map and
-I2C framing. Register reads use a pointer write with STOP followed by a read,
-as illustrated in Figure 4-9. The version discrepancy remains unresolved:
-0x37 reads 0x88 while the supplied datasheet specifies 0xA1.
-Tag activation reference: [NXP MIFARE Classic EV1 1K datasheet](https://www.nxp.com/docs/en/data-sheet/MF1S50YYX_V1.pdf).
+The following lifecycle illustrates application use, after successful setup:
 
-## Build, upload, and capture
+```cpp
+// Schedule a new fresh UID read when the application's polling interval is due.
+if (!reader.busy() && readDue) reader.startRead();
+// Advance NFC between independently scheduled 100 Hz control updates.
+if (reader.busy()) reader.service(esp_timer_get_time());
+// Consume completed events; never reuse the UID after a NoTag/error event.
+uint8_t uid[4];
+const auto result = reader.takeResult(uid);
+if (result == NfcAsync::Result::Uid) { /* handle these freshly received bytes */ }
+```
 
-From the repository root, select the actual board port:
+Consume an outstanding result before starting the next read: `startRead()`
+returns false while a result is still waiting to be consumed. The benchmark
+main.cpp provides a complete working scheduling example.
+
+## Adopted settings and fast path
+
+- Requested I2C clock: **400 kHz**, with combined register reads, cached register
+  pointer where valid, and burst FIFO transfers.
+- Type A RF: **106 kbit/s**, 100% ASK, RxThreshold 0x55, RxSel 0x80, automatic
+  stronger-I/Q channel selection preserving reset demodulator timing bits.
+- Receiver gain: **43 dB**, encoded as gain 6. At the current fixed position,
+  48 dB produced empty frames and 33 dB produced many rejected frames; 38 and
+  43 dB both worked. This is a bench result, not a range/antenna calibration.
+- RF-response timer: **1 ms**; host fallback is RF timeout plus 2 ms. Normal
+  poll interval and first status-poll delay: **710 us**. Even when deadlines
+  have elapsed, received-data flags are checked before reporting a timeout.
+- First discovery uses seven-bit **WUPA (0x52)**, then anticollision **93 20**.
+  Subsequent reads try anticollision directly while the tag is believed READY.
+  This hint skips a handshake; it never substitutes cached UID bytes for RF data.
+- Every UID is freshly received, has the expected five-byte UID/BCC frame
+  length, complete final byte, no reported chip error flags, and a valid BCC.
+  SELECT/SAK/CRC_A are omitted because this test only needs the UID.
+- Persistent Transceive is reused. An empty FIFO and unchanged framing are
+  reused only after the previous response was fully consumed. Timeout/error
+  paths abort and prepare the chip again. An empty receive frame is rejected
+  and retried at most once per request, with `empty_frames` retained in reports.
+
+The fast READY probe falls back to discovery after a timeout. This code path
+will be assessed physically during the next tag-absent and arrival/removal
+round; the present results do not validate those scenarios. The reader currently
+supports a single four-byte-UID Type A tag. Seven-byte UIDs and collision
+resolution are not implemented. There are no tag-memory writes/authentication
+commands. Reader VersionReg remains 0x88; exact chip revision is unconfirmed.
+
+## Commands, build, and direct hardware experiments
+
+USB serial is 115200 baud. **Commands end with a newline.** No test starts at boot.
+
+- `S`: five-second maximum-throughput benchmark with current settings.
+- `X`: cancel an active run and verify RF-off cleanup.
+- `H`: show command syntax.
+- `B duration_ms clock_hz adaptive poll_us rf_timeout_us burst cache heartbeat_us fast_tx gain combined interval_us`:
+  run an explicit bounded profile. Duration is limited to 100..120000 ms.
+
+Default command:
+
+```text
+B 5000 400000 1 710 1000 1 1 10000 1 6 1 0
+```
+
+The last argument is the interval between request starts: 0 means saturation;
+10000 means a 100 Hz request schedule. Serial samples are buffered in RAM and
+printed only after the timed experiment and RF cleanup have ended. The buffer
+holds 8192 per-request samples; `samples_dropped` reports overflow, while summary
+counters/histograms still cover the whole run. Ending at the duration boundary
+may cancel one outstanding partial read, which is not counted as a completed
+request. Cancellation retains completed samples and reports `CANCELLED`.
+
+From the repository root:
 
 ```powershell
 $env:PYTHONIOENCODING='utf-8'
 & "$env:USERPROFILE\.platformio\penv\Scripts\platformio.exe" run -e e8_nfc_fm17550_i2c -t upload --upload-port COM9
-& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" test/E8_nfc_communication/capture.py COM9 S
+& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" test/E8_nfc_communication/benchmark.py --duration-ms 10000
+& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" test/E8_nfc_communication/benchmark.py --duration-ms 10000 --interval-us 10000
+& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" test/E8_nfc_communication/analyze_async.py --output src/e8_nfc_fm17550_i2c/results/summary.json
 ```
 
-Use `R` instead of `S` for a read-only snapshot. The Python capture sets DTR on
-and RTS off before opening the port, never pulses RTS, retains raw output and
-incomplete-run status, and attempts cancellation if a run does not finish.
-New logs include the source SHA256. Upload/reset tooling is a separate workflow.
-
-## Hardware observations, 2026-10-12
-
-After the full power cycle, CommandReg read 0x20 (power-down bit clear), and
-all configuration writes retained their values. Reset and RF transmission then
-worked. Default receiver settings still produced no complete tag response.
-A bounded receiver-setting sweep first read the tag with RFCfg 0x78, Demod
-0x0D, RxThreshold 0x55, RxSel 0x80, and REQA. These settings were adopted
-together; the experiment does not establish which individual change was necessary.
-The receiver gain is 48 dB; automatic stronger-I/Q selection is enabled while
-the demodulator's reset timing bits are preserved. Antenna drive power is unchanged.
-
-Final firmware captures:
-
-- `test/E8_nfc_communication/run_20261012_200816_806603_COM9.log`
-- `test/E8_nfc_communication/run_20261012_200832_972531_COM9.log`
-
-Both received the same frames:
-
-```text
-REQA response:       04 00
-Anticollision:      11 E5 99 23 4E
-SELECT response:    08 B6 DD
-TAG UID=11:E5:99:23 ATQA=0x0004 SAK=0x08 BCC=OK CRC=OK
-E8 END: result=TAG_READ cleanup=RF_OFF
-```
-
-ATQA is assembled little-endian from the wire bytes 04 00. The four UID bytes
-are received from the tag, then compared with the reference; they are not used
-to fabricate the anticollision response. SELECT echoes that received UID.
-The reader's version remains 0x88, so its exact chip identity/revision remains
-unconfirmed despite successful ISO14443A identification.
-
-### Earlier failures (retained for diagnosis)
-
-The original communication test acknowledged 0x12 and 0x28 and read version
-0x88 at 0x28. Raw historical log: `test/E8_nfc_communication/run_20261012_185731_COM9.log`.
-Subsequent iterations access 0x28 exclusively. Builds/uploads succeeded with
-verified flash hashes; these are firmware checks, not proof of NFC operation.
-
-- SoftReset left CommandReg at 0x1F after a 100 ms wait; an explicit Idle/wake
-  write left it at 0x10 after another 100 ms. Bit 4 is still set.
-- TxMode/RxMode, TxSel, RxSel, Mode, and TxControl retained writes.
-- TxAuto 0x15 and timer configuration 0x2A-0x2D did not retain requested writes.
-- Repeated START and STOP-separated register reads gave the same startup failure.
-- One diagnostic build attempted RF despite the configuration mismatch, using
-  the independent host deadline. Ten WUPA attempts yielded IRQ 0x0C, no TxIRq
-  or RxIRq, ErrorReg 0x00, and FIFO length 1: the outgoing byte remained queued.
-  No ATQA, UID, or SAK was received. Raw log:
-  `test/E8_nfc_communication/run_20261012_191829_COM9.log`.
-- The current firmware requires successful startup/configuration before RF.
-  Read-only snapshot `run_20261012_192049_486316_COM9.log` confirmed CommandReg
-  0x10, TxControl 0x80 (antenna outputs disabled), and VersionReg 0x88.
-
-The earlier register behavior suggested a reader startup/clock problem; the
-full power cycle cleared it, but its physical cause is not established. The user reports a four-wire
-connection, 3.3 V module supply, and no exposed reset pin; IRQ is unnecessary
-for the polling implementation. If startup fails again, disconnect all four
-module wires or remove all supplying power to avoid back-power through SDA/SCL,
-then use `R` to inspect startup and `S` to retry with the tag in place.
-All iteration logs are retained in `test/E8_nfc_communication/`.
+The Python tool sets DTR on and RTS off before opening the serial port, never
+pulses RTS, keeps raw logs and incomplete-capture status, and attempts `X` on
+capture error/cancellation. Flashing/reset tools are a separate workflow.
+Final captures include firmware/source SHA256 and source snapshots. New captures
+go into `results/raw`; selected verification/comparison logs are directly available
+there. Earlier raw measurements are compressed in `results/archive/iterations.zip`,
+with byte hashes and locations recorded in `results/manifest.json`. Redundant
+loose copies were removed after verification. The original UID/ATQA/SAK test is
+recorded in [UID_TEST_HISTORY.md](UID_TEST_HISTORY.md), with its source saved as
+`results/history/baseline_uid_main.cpp.txt`.

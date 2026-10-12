@@ -1,0 +1,36 @@
+STATUS: incomplete until capture ends
+PORT: COM9; command: S; source SHA256: f75af40ab518af5cde907d2f101532b303c474808c6d309267ea9593fd6bd7a2
+
+E8 START: NFC only at 0x28, D4/D5, 100000 Hz; X cancels.
+Reader 0x28 VersionReg=0x88 (datasheet says 0xA1)
+CONFIG reg=0x26 wrote=0x78 read=0x78
+CONFIG reg=0x19 wrote=0x0D read=0x0D
+CONFIG reg=0x18 wrote=0x55 read=0x55
+CONFIG reg=0x12 wrote=0x00 read=0x00
+CONFIG reg=0x13 wrote=0x00 read=0x00
+CONFIG reg=0x15 wrote=0x40 read=0x40
+CONFIG reg=0x16 wrote=0x10 read=0x10
+CONFIG reg=0x17 wrote=0x80 read=0x80
+CONFIG reg=0x11 wrote=0x3D read=0x3D
+CONFIG reg=0x2A wrote=0x80 read=0x80
+CONFIG reg=0x2B wrote=0xA9 read=0xA9
+CONFIG reg=0x2C wrote=0x03 read=0x03
+CONFIG reg=0x2D wrote=0xE8 read=0xE8
+CONFIG reg=0x14 wrote=0x83 read=0x83
+Attempt 1
+TX: 26
+RX status: irq=0x64 error=0x00 FIFO=2 lastBits=0 elapsed=3 ms
+RX: 04 00
+ATQA=0x0004
+TX: 93 20
+RX status: irq=0x64 error=0x00 FIFO=5 lastBits=0 elapsed=5 ms
+RX: 11 E5 99 23 4E
+TX: 93 70 11 E5 99 23 4E 03 0B
+RX status: irq=0x64 error=0x00 FIFO=3 lastBits=0 elapsed=4 ms
+RX: 08 B6 DD
+TAG UID=11:E5:99:23 ATQA=0x0004 SAK=0x08 BCC=OK CRC=OK
+PASS: UID, ATQA and SAK match phone.
+E8 END: result=TAG_READ cleanup=RF_OFF
+Send S to read again; R prints registers; X cancels a run.
+
+STATUS: completed; see E8 END for hardware result

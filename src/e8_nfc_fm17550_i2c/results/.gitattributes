@@ -1,0 +1,5 @@
+# Keep measurement and source-snapshot bytes identical to their SHA256 manifests.
+raw/*.log -text -whitespace
+archive/*.zip -text
+sources/*.txt -text -whitespace
+history/*.txt -text -whitespace
