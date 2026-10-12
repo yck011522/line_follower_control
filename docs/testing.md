@@ -68,7 +68,7 @@ Current order: **E0 -> E1 -> E2 -> E3 -> E4 -> E5 -> E6**. E3 is the standalone 
 | E1 motor driver | Command bounded wheel speeds, read speed and battery telemetry where supported | Protocol/units verified; write/read durations, physical stop behavior, feedback availability |
 | E2 motor speed | I2C only; fixed -100..100 step 10; zero baseline/rest; 1 s settling + 2 s measuring | M2/M4 command-to-counts/s mapping and nominal mm/s estimate; stored PID 3/0.375/0.5 assumed, five other settings rewritten at boot |
 | E4 line sensor library | Repeat E3 through the shared class at 1000 Hz | Success/latency, retry behavior, reading age and minimum 1000 us request-start spacing |
-| E5 NFC reader | Read UID only, with present/absent and repeated-tag cases | UID correctness, repeat detection behavior, present/absent latency, timeout impact; later test moving passes |
+| E5 NFC reader | Continuously read ISO14443A UIDs (4/7/10 bytes), measuring detection-to-UID latency | UID correctness and length, poll/card counts, absent/present behavior, repeated-tag latency; later test moving passes |
 | E6 wireless | USB bridge ↔ robot request/response, then four-robot traffic | Round-trip latency, loss, duplicates, ordering, sequence acknowledgments at 50 Hz downlink and 20 Hz per robot uplink |
 
 After individual tests, measure the complete control cycle under concurrent sensing, motor traffic, wireless traffic, and telemetry. Individual operation timings alone do not establish the integrated loop budget. Bench-validate motor commands with wheels clear before driving tests; confirm wheel direction and stop behavior first.
