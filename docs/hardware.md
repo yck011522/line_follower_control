@@ -16,12 +16,28 @@ Microcontroller: ESP32S3 Xiao by Seeed Studio.
 Radio communication using BLE from MCU onboard connection
 
 Drive Motor 2x JGY2430 12V Brushless Worm Gear motor  (12V, 40RPM @ no load, D8x18.8mm shaft)
+- Gear ratio 150:1, Encoder 9 step per rev = 1350 step / rev
+- 0.12A, 0.0Kgcm  @ 40RPM No Load
+- 0.6A,  5.6Kgcm  @ 30RPM Rated Load (7.2W)
+- 2.0A,  23.0Kgcm @ 0RPM  Stall 
+
 - Red = 12V+
 - Black = GMD
 - Yellow = CAP (5V Pulse Feedback to MCU)
 - White = PWM Speed Input (3.3V ok) 
 - Orange = CW / CCW Input (3.3V ok)
 (Left Motor = 1. Right = 2)
+
+Drive Wheel (For Differential Steering)
+- Rubber Tyre
+- Diameter 66.5mm, Tyre wide 26mm 
+- Center to Center distance of two drive wheel 89mm
+- Front Back Axle Distance 85mm
+
+Front Drive Wheel
+- Omni Wheel on free spin
+- Diameter 60mm, tyre width 24.5mm
+- Center to Center distance of two front wheel 72.5mm
 
 Signal Level Shifter (tested to 400MHz)
 - 5V   |  3.3V
