@@ -34,10 +34,10 @@ void setBothMotorsPWM(int targetPwm);
 void stopAllMotors();
 
 // Executes one tick of the 100 Hz control loop:
-// computes instantaneous steps/sec and updates the EMA filter
+// computes instantaneous steps/sec, updates EMA filter, and executes PI+FF in speed mode
 void updateMotorControlLoop(uint64_t nowUs);
 
-// Returns the current commanded PWM value for both motors
+// Returns the current commanded or active average PWM value for both motors
 int getCommandedPWM();
 
 // Returns the EMA filtered speed (steps/sec) for Left motor
@@ -45,3 +45,27 @@ float getLeftMotorSpeed();
 
 // Returns the EMA filtered speed (steps/sec) for Right motor
 float getRightMotorSpeed();
+
+// Returns the EMA filtered speed (mm/sec) for Left motor
+float getLeftMotorSpeedMmS();
+
+// Returns the EMA filtered speed (mm/sec) for Right motor
+float getRightMotorSpeedMmS();
+
+// Sets closed-loop target velocity in mm/sec (clamped to [-120, +120])
+void setTargetSpeedMmPerSec(float targetMmS);
+
+// Returns current closed-loop target velocity in mm/sec
+float getTargetSpeedMmPerSec();
+
+// Returns active control mode (MODE_OPEN_LOOP_PWM or MODE_CLOSED_LOOP_SPEED)
+ControlMode getControlMode();
+
+// Switches active control mode
+void setControlMode(ControlMode mode);
+
+// Converts pulse rate (steps/sec) to linear speed (mm/sec) using wheel & gear geometry
+float stepsPerSecToMmPerSec(float stepsPerSec);
+
+// Converts linear speed (mm/sec) to pulse rate (steps/sec) using wheel & gear geometry
+float mmPerSecToStepsPerSec(float mmPerSec);

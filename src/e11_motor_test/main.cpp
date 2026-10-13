@@ -79,34 +79,74 @@ static void processCommand(char *line)
         return;
     }
 
-    // Check for STOP command: "STOP", "stop", "S", "s"
-    if (strcasecmp(line, "STOP") == 0 || strcasecmp(line, "S") == 0)
+    // Check for STOP command: "STOP", "stop"
+    if (strcasecmp(line, "STOP") == 0)
     {
         stopAllMotors();
         Serial.println("# OK STOPPED");
         return;
     }
 
-    // Diagnostic STATUS command
+    // Diagnostic STATUS command (must check before generic 'S' prefix)
     if (strcasecmp(line, "STATUS") == 0)
     {
         noInterrupts();
         unsigned long lPulses = leftPulseCount;
         unsigned long rPulses = rightPulseCount;
         interrupts();
-        Serial.printf("# STATUS: P=%d, LeftPWM=%d, RightPWM=%d, LeftPulses=%lu, RightPulses=%lu, L_spd=%.2f, R_spd=%.2f\n",
+        Serial.printf("# STATUS: Mode=%s, TargetSpeed=%.1f mm/s, P=%d, LeftPWM=%d, RightPWM=%d, "
+                      "L_spd=%.1f stp/s (%.1f mm/s), R_spd=%.1f stp/s (%.1f mm/s), "
+                      "L_I=%.1f, R_I=%.1f, LeftPulses=%lu, RightPulses=%lu\n",
+                      (getControlMode() == MODE_CLOSED_LOOP_SPEED) ? "SPEED" : "PWM",
+                      getTargetSpeedMmPerSec(),
                       getCommandedPWM(),
                       motorStates[MOTOR_LEFT].pwmValue,
                       motorStates[MOTOR_RIGHT].pwmValue,
-                      lPulses, rPulses,
-                      getLeftMotorSpeed(), getRightMotorSpeed());
+                      getLeftMotorSpeed(), getLeftMotorSpeedMmS(),
+                      getRightMotorSpeed(), getRightMotorSpeedMmS(),
+                      motorStates[MOTOR_LEFT].integralError,
+                      motorStates[MOTOR_RIGHT].integralError,
+                      lPulses, rPulses);
+        return;
+    }
+
+    // Check for 'S' speed command: S<mm/s> (e.g. S100, S-50, S120, S0)
+    // Out-of-range values are clamped to [-120.0, +120.0] mm/s.
+    // A bare 'S' or 's' without parameters acts as STOP.
+    if (line[0] == 'S' || line[0] == 's')
+    {
+        char *valStr = line + 1;
+        while (*valStr == ' ' || *valStr == '\t') valStr++;
+        if (*valStr == '\0')
+        {
+            // Bare 'S' without argument is STOP
+            stopAllMotors();
+            Serial.println("# OK STOPPED");
+            return;
+        }
+
+        float targetMmS = atof(valStr);
+        // Clamp to [-120.0, +120.0] mm/s envelope per specification
+        if (targetMmS > SPEED_CMD_MAX_MM_S) targetMmS = SPEED_CMD_MAX_MM_S;
+        if (targetMmS < SPEED_CMD_MIN_MM_S) targetMmS = SPEED_CMD_MIN_MM_S;
+
+        if (fabsf(targetMmS) < 0.1f)
+        {
+            stopAllMotors();
+            Serial.println("# OK S=0.0 mm/s (STOPPED)");
+        }
+        else
+        {
+            setTargetSpeedMmPerSec(targetMmS);
+            Serial.printf("# OK S=%.1f mm/s\n", targetMmS);
+        }
         return;
     }
 
     // Help command
     if (strcasecmp(line, "HELP") == 0)
     {
-        Serial.println("# Commands: P<val> (both motors), L<val> (left), R<val> (right), STOP, STATUS, HELP");
+        Serial.println("# Commands: S<mm/s> (closed-loop speed -120..+120), P<val> (open-loop PWM -255..+255), L<val>, R<val>, STOP, STATUS, HELP");
         return;
     }
 
@@ -166,7 +206,7 @@ void setup()
 
     Serial.println();
     Serial.println("=== E11 BLDC Motor Speed & PWM Controller ===");
-    Serial.println("Commands: P-255..P255, STOP, STATUS, HELP");
+    Serial.println("Commands: S-120..S120 (closed-loop speed mm/s), P-255..P255 (open-loop PWM), STOP, STATUS, HELP");
     Serial.println("Telemetry: P=<pwm>,L=<left_steps/s>,R=<right_steps/s> @ 5 Hz");
     Serial.println("# Ready");
 }
