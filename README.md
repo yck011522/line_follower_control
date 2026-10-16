@@ -1,6 +1,10 @@
 # ESP32 line-following robot controller
 
-Controller firmware and repeatable hardware experiments for four differential-drive toy cars on a reconfigurable game board. Each car uses an ESP32-S3, an eight-channel line sensor, an RC522 NFC reader, and a motor controller that handles wheel-speed regulation internally.
+[E7 manual-push data collection](src/e7_data_collection/README.md) records the E6
+raw line mask and calibrated M2/M4 encoder telemetry through ESP-NOW at a target
+100 Hz. It includes Wi-Fi/OTA support and an Enter/Ctrl-C Python CSV logger.
+
+Controller firmware and repeatable hardware experiments for four differential-drive toy cars on a reconfigurable game board. Each car uses an ESP32-S3, an eight-channel line sensor, an FM17550 NFC reader, and a motor controller that handles wheel-speed regulation internally.
 
 The first development phase measures peripheral performance independently before integrating line following and wireless control. PlatformIO is the intended firmware build/upload tool; Python will automate uploads, test triggering, serial capture, and analysis on Windows.
 
@@ -53,6 +57,10 @@ between targets. Python captures encoder feedback and plots commanded versus
 measured speed. See the [E2 guide](test/E2_motor_speed/README.md) and the
 [project motor settings and E0 findings](docs/motor-settings.md).
 All Python test connections must set **RTS off before opening the port**.
+
+The E8 [FM17550 I2C UID poller](src/e8_nfc_fm17550_i2c/README.md) continuously
+tests ISO14443A tags on D4/D5 and reports variable-length UIDs and
+detection-to-UID timing.
 
 Start with [E0 direct USB PID tuning](test/E0_motor_tuning/README.md), then the [E1 motor test plan](test/E1_motor_communication/PLAN.md) and [motor interface reference](reference/RC_Car_Motor_Driver_Interface.md). All project pin numbers use board D labels: motor SDA D4/SCL D5 (GPIO5/GPIO6), line-sensor SDA D6/SCL D7 (GPIO43/GPIO44). Remaining register/scaling details need verification before motion testing. The line-sensor model/protocol can follow later. Remaining questions are tracked in [open questions](docs/open-questions.md).
 

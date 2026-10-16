@@ -13,12 +13,20 @@ Status vocabulary: **planned**, **in progress**, **blocked**, **complete**. Mark
 | E3: line sensor | In progress | Standalone reads and Arduino 3.3.12 timing verified; 1000 Hz repeat testing by operator |
 | E1: motor driver (first) | In progress | [Five-second runs](../test/E1_motor_communication/LONG_RUN_RESULTS.md): 100/400 kHz communication and both-motor motion verified; zero-speed hold oscillates; scaling/tuning pending |
 | E4: line sensor library | Complete for initial bench | One-header class; 130000/130000 reads after reader reset; 1000 us minimum spacing during retries and normal reads; [report](../test/E4_line_sensor_library/results/20261001T092116Z_repeat/README.md) |
-| E5: NFC reader | Planned | UID-only reader, present/absent timing and event behavior |
+| E5: NFC reader | In progress | E8 FM17550 I2C poller reads 4/7/10-byte ISO14443A UIDs; hardware validation pending |
 | E6: wireless | Planned | USB bridge and radio tests, then four-robot load measurements |
 | Integrated control | Planned | Steering PID, navigation states, command handling and fault behavior |
 | Driving validation | Planned | 100 mm/s tracking on 14 mm lines and 30–50 mm turns; higher-rate/speed trials |
 
 ## Development log
+
+### 2026-10-12 — FM17550 I2C UID poller
+
+- Added the `e8_nfc_fm17550_i2c` environment for continuous ISO14443A tag
+  polling on D4/D5. The firmware supports 4-, 7-, and 10-byte UIDs, reports
+  detection-to-UID timing, and prints rolling five-second poll/card counters.
+- The assumed module I2C address is 0x28. Firmware build and on-hardware reader
+  behavior still need verification.
 
 ### 2026-09-30 - E0 baseline and E2 simplification
 

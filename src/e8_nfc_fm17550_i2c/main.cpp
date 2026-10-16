@@ -1,0 +1,205 @@
+#include <Arduino.h>
+#include <esp_timer.h>
+#include "NfcAsync.h"
+
+namespace {
+NfcAsync reader;
+constexpr uint8_t kReference[] = {0x11, 0xE5, 0x99, 0x23};
+constexpr size_t kSampleCapacity = 8192;
+struct Sample { uint32_t latencyUs; uint16_t maxServiceUs; uint8_t result; uint8_t match; uint8_t diagnostic[6]; };
+Sample samples[kSampleCapacity];
+uint32_t histogram[256]; // 4 us buckets; the final bucket includes all values >= 1020 us.
+size_t sampleCount = 0;
+uint32_t requests = 0, successes = 0, noTags = 0, protocolErrors = 0, busErrors = 0, mismatches = 0;
+uint32_t serviceCalls = 0, maxServiceUs = 0, maxReadServiceUs = 0, heartbeatCount = 0;
+uint32_t heartbeatMissed = 0, heartbeatMaxLateUs = 0;
+uint64_t serviceTotalUs = 0, benchmarkStartUs = 0, benchmarkEndUs = 0, readStartUs = 0;
+uint64_t nextHeartbeatUs = 0;
+uint64_t nextRequestUs = 0;
+uint32_t durationMs = 5000, heartbeatPeriodUs = 10000;
+uint32_t requestIntervalUs = 0;
+bool running = false;
+uint8_t lastUid[4] = {};
+String commandLine;
+NfcAsync::Options options;
+}
+
+// Print available bounded experiments; no test or RF output begins just by opening USB.
+void printHelp()
+{
+    Serial.println("E8 ASYNC ready: NFC only 0x28 D4/D5; no motor or line-sensor commands.");
+    Serial.println("B duration_ms clock_hz adaptive poll_us rf_timeout_us burst cache heartbeat_us fast_tx gain combined interval_us");
+    Serial.println("Example: B 5000 400000 1 710 1000 1 1 10000 1 6 1 0");
+    Serial.println("S uses current settings; X cancels; H prints help. Init/summary are outside timed service.");
+}
+
+// Attempt RF cleanup before reporting or dumping samples; preserve partial runs on cancellation.
+void finishBenchmark(const char *reason)
+{
+    const uint64_t elapsedUs = esp_timer_get_time() - benchmarkStartUs;
+    const uint32_t transactions = reader.transactions();
+    const uint32_t emptyFrames = reader.emptyFrames();
+    running = false;
+    const bool stopped = reader.end();
+    Serial.printf("OPTIONS fast_tx=%u gain=%u empty_frames=%lu combined=%u interval_us=%lu\n", options.fastTx,
+                  options.gain, (unsigned long)emptyFrames, options.combined, (unsigned long)requestIntervalUs);
+    Serial.printf("SUMMARY {\"reason\":\"%s\",\"clock_hz\":%lu,\"adaptive\":%u,\"poll_us\":%u,\"rf_timeout_us\":%u,\"burst\":%u,\"cache\":%u,\"heartbeat_us\":%lu,\"elapsed_us\":%llu,\"requests\":%lu,\"uid_reads\":%lu,\"no_tag\":%lu,\"protocol_errors\":%lu,\"bus_errors\":%lu,\"mismatches\":%lu,\"samples\":%u,\"samples_dropped\":%lu,\"service_calls\":%lu,\"service_total_us\":%llu,\"max_service_us\":%lu,\"transactions\":%lu,\"heartbeat_count\":%lu,\"heartbeat_missed\":%lu,\"heartbeat_max_late_us\":%lu,\"cleanup\":\"%s\",\"last_uid\":\"%02X:%02X:%02X:%02X\"}\n",
+                  reason, (unsigned long)options.clockHz, options.adaptive, options.pollUs, options.rfTimeoutUs,
+                  options.burst, options.cachePointer, (unsigned long)heartbeatPeriodUs,
+                  (unsigned long long)elapsedUs, (unsigned long)requests, (unsigned long)successes,
+                  (unsigned long)noTags, (unsigned long)protocolErrors, (unsigned long)busErrors,
+                  (unsigned long)mismatches, unsigned(sampleCount), (unsigned long)(requests - sampleCount),
+                  (unsigned long)serviceCalls, (unsigned long long)serviceTotalUs, (unsigned long)maxServiceUs,
+                  (unsigned long)transactions, (unsigned long)heartbeatCount, (unsigned long)heartbeatMissed,
+                  (unsigned long)heartbeatMaxLateUs, stopped ? "RF_OFF" : "I2C_ERROR",
+                  lastUid[0], lastUid[1], lastUid[2], lastUid[3]);
+    // Serial output is intentionally deferred until RF and the benchmark have stopped.
+    Serial.println("SAMPLES latency_us,max_service_us,result,uid_match,discovery,irq,error,count,control,retries");
+    for (size_t i = 0; i < sampleCount; ++i)
+        Serial.printf("%lu,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", (unsigned long)samples[i].latencyUs,
+                      samples[i].maxServiceUs, samples[i].result, samples[i].match,
+                      samples[i].diagnostic[0], samples[i].diagnostic[1], samples[i].diagnostic[2],
+                      samples[i].diagnostic[3], samples[i].diagnostic[4], samples[i].diagnostic[5]);
+    Serial.print("SERVICE_HIST_4US");
+    for (uint32_t bucket : histogram) Serial.printf(",%lu", (unsigned long)bucket);
+    Serial.println();
+    Serial.printf("E8 END: result=%s cleanup=%s\n", reason, stopped ? "RF_OFF" : "I2C_ERROR");
+}
+
+// Initialize once outside the timing window, then let loop() drive every RF exchange asynchronously.
+void startBenchmark()
+{
+    if (running) return;
+    Serial.printf("E8 START: async benchmark duration_ms=%lu; UID reference 11:E5:99:23\n", (unsigned long)durationMs);
+    if (!reader.begin(options)) {
+        const bool stopped = reader.end();
+        Serial.printf("E8 END: result=INIT_FAILED cleanup=%s\n", stopped ? "RF_OFF" : "I2C_ERROR");
+        return;
+    }
+    requests = successes = noTags = protocolErrors = busErrors = mismatches = 0;
+    serviceCalls = maxServiceUs = maxReadServiceUs = heartbeatCount = 0;
+    heartbeatMissed = heartbeatMaxLateUs = 0;
+    serviceTotalUs = 0;
+    sampleCount = 0;
+    memset(histogram, 0, sizeof(histogram));
+    memset(lastUid, 0, sizeof(lastUid));
+    benchmarkStartUs = esp_timer_get_time();
+    benchmarkEndUs = benchmarkStartUs + uint64_t(durationMs) * 1000;
+    nextHeartbeatUs = benchmarkStartUs + heartbeatPeriodUs;
+    nextRequestUs = benchmarkStartUs;
+    running = true;
+}
+
+// Parse an explicit experiment; constrain every duration, bus speed, and timeout before touching hardware.
+void executeCommand(const String &command)
+{
+    if (command == "X" || command == "x") {
+        if (running) finishBenchmark("CANCELLED");
+        return;
+    }
+    if (running) return;
+    if (command == "H" || command == "h") { printHelp(); return; }
+    if (command == "S" || command == "s") { startBenchmark(); return; }
+    unsigned duration = 0, clock = 0, adaptive = 0, poll = 0, timeout = 0, burst = 0, cache = 0, beat = 0, fast = 0, gain = 0, combined = 0, interval = 0;
+    if (sscanf(command.c_str(), "B %u %u %u %u %u %u %u %u %u %u %u %u", &duration, &clock, &adaptive,
+               &poll, &timeout, &burst, &cache, &beat, &fast, &gain, &combined, &interval) != 12 || duration < 100 || duration > 120000 ||
+        clock < 100000 || clock > 400000 || adaptive > 1 || poll > 5000 || timeout < 500 ||
+        timeout > 25000 || burst > 1 || cache > 1 || beat < 100 || beat > 100000 || fast > 1 || gain < 4 || gain > 7 || combined > 1 || interval > 1000000) {
+        Serial.println("Invalid command/settings. Send H for help.");
+        return;
+    }
+    durationMs = duration;
+    options.clockHz = clock;
+    options.adaptive = adaptive;
+    options.pollUs = poll;
+    options.rfTimeoutUs = timeout;
+    options.burst = burst;
+    options.cachePointer = cache;
+    heartbeatPeriodUs = beat;
+    options.fastTx = fast;
+    options.gain = gain;
+    options.combined = combined;
+    requestIntervalUs = interval;
+    startBenchmark();
+}
+
+// This synthetic scheduling marker measures NFC-induced delay, not real motor-control workload.
+void serviceHeartbeat(uint64_t nowUs)
+{
+    if (nowUs < nextHeartbeatUs) return;
+    const uint32_t late = nowUs - nextHeartbeatUs;
+    heartbeatMaxLateUs = max(heartbeatMaxLateUs, late);
+    heartbeatMissed += late / heartbeatPeriodUs;
+    nextHeartbeatUs += uint64_t(late / heartbeatPeriodUs + 1) * heartbeatPeriodUs;
+    ++heartbeatCount;
+}
+
+// Service the reader once and consume only fresh, validated UID events; no serial printing in this path.
+void serviceBenchmark()
+{
+    const uint64_t nowUs = esp_timer_get_time();
+    serviceHeartbeat(nowUs);
+    if (nowUs >= benchmarkEndUs) { finishBenchmark("COMPLETED"); return; }
+    if (!reader.busy()) {
+        uint8_t uid[4] = {};
+        const NfcAsync::Result result = reader.takeResult(uid);
+        if (result != NfcAsync::Result::None) {
+            ++requests;
+            const uint32_t latency = nowUs - readStartUs;
+            bool match = false;
+            if (result == NfcAsync::Result::Uid) {
+                ++successes;
+                memcpy(lastUid, uid, 4);
+                match = memcmp(uid, kReference, 4) == 0;
+                if (!match) ++mismatches;
+            } else if (result == NfcAsync::Result::NoTag) ++noTags;
+            else if (result == NfcAsync::Result::ProtocolError) ++protocolErrors;
+            else if (result == NfcAsync::Result::BusError) ++busErrors;
+            if (sampleCount < kSampleCapacity) {
+                samples[sampleCount] = {latency, uint16_t(min(maxReadServiceUs, uint32_t(65535))), uint8_t(result), uint8_t(match), {}};
+                reader.diagnostics(samples[sampleCount].diagnostic);
+                ++sampleCount;
+            }
+            if (result == NfcAsync::Result::BusError) { finishBenchmark("BUS_ERROR"); return; }
+        }
+        if (nowUs >= nextRequestUs && reader.startRead()) {
+            readStartUs = nowUs; maxReadServiceUs = 0;
+            nextRequestUs = nowUs + requestIntervalUs;
+        }
+    }
+    if (!reader.busy()) return; // No NFC service work or measurements between scheduled requests.
+    const uint64_t start = esp_timer_get_time();
+    reader.service(start);
+    const uint32_t elapsed = esp_timer_get_time() - start;
+    ++serviceCalls;
+    serviceTotalUs += elapsed;
+    maxServiceUs = max(maxServiceUs, elapsed);
+    maxReadServiceUs = max(maxReadServiceUs, elapsed);
+    ++histogram[min(elapsed / 4, uint32_t(255))];
+}
+
+// USB and I2C are idle at boot; the reader initializes only after an explicit serial command.
+void setup()
+{
+    Serial.begin(115200);
+    const uint32_t start = millis();
+    while (!Serial && millis() - start < 5000) delay(10);
+    Wire.begin(D4, D5, 400000);
+    Wire.setTimeOut(2);
+    commandLine.reserve(120);
+    printHelp();
+}
+
+// Serial parsing is nonblocking; the control marker runs between individual NFC bus transactions.
+void loop()
+{
+    while (Serial.available()) {
+        const char value = static_cast<char>(Serial.read());
+        if (value == '\n' || value == '\r') {
+            if (commandLine.length()) { executeCommand(commandLine); commandLine = ""; }
+        } else if (commandLine.length() < 119) commandLine += value;
+        else commandLine = "";
+    }
+    if (running) serviceBenchmark();
+    else delay(1);
+}

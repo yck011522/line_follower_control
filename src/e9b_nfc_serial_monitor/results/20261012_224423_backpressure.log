@@ -1,0 +1,162 @@
+CAPTURE_STATUS: incomplete; serial backpressure experiment
+HOST: 3000 gain queries; no host reads for 3 seconds
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN rejected; allowed dB: 18,23,33,38,43,48
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+GAIN configured=43 dB; allowed: 18,23,33,38,43,48; use G 43 + Enter
+REPORT polls/s=407.80 avg_poll_ms=2.448 max_poll_ms=6.568 polls=2039 tags=0 no_tag=2039 errors=0 gain_db=43 serial_dropped=256 serial_short=0 serial_max_us=355
+REPORT polls/s=408.59 avg_poll_ms=2.443 max_poll_ms=2.751 polls=2043 tags=0 no_tag=2043 errors=0 gain_db=43 serial_dropped=256 serial_short=0 serial_max_us=355
+
+HOST: port closed for 6 seconds; no reset or RTS pulse
+REPORT polls/s=408.60 avg_poll_ms=2.443 max_poll_ms=2.743 polls=2043 tags=0 no_tag=2043 errors=0 gain_db=43 serial_dropped=256 serial_short=0 serial_max_us=355
+E9B stopped; RF off=yes
+
+CAPTURE_STATUS: completed

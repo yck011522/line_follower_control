@@ -1,0 +1,6 @@
+CAPTURE_STATUS: completed; 6 second gain report check
+E9B stopped; RF off=yes
+INIT version=0x88 clock=400000 timeout_us=1000
+GAIN applied=43 dB
+REPORT polls/s=408.60 avg_poll_ms=2.443 max_poll_ms=2.477 polls=2043 tags=0 no_tag=2043 errors=0 gain_db=43
+E9B stopped; RF off=yes
