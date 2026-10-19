@@ -8,7 +8,8 @@ namespace
 {
     NfcAsync reader;
     bool running = false;
-    uint8_t gainCode = 6;
+    uint8_t gainCode = 1; // Default receiver gain: code 1 selects 23 dB.
+    // Indexed by RFCfgReg bits 6:4; codes 0/2 and 1/3 intentionally share gains.
     constexpr uint8_t gainDbByCode[] = {18, 23, 18, 23, 33, 38, 43, 48};
     bool receivingGain = false, gainOverflow = false;
     char gainArgument[12] = {};
@@ -85,7 +86,7 @@ namespace
             ++end;
         if (!gainOverflow && gainLength == 0)
         {
-            serialOutput("GAIN configured=%u dB; allowed: 18,23,33,38,43,48; use G 43 + Enter\n", gainDbByCode[gainCode]);
+            serialOutput("GAIN configured=%u dB; allowed: 18,23,33,38,43,48; use G 23 + Enter\n", gainDbByCode[gainCode]);
             return;
         }
         uint8_t requestedCode = 8;
