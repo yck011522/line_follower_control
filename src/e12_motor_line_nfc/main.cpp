@@ -43,6 +43,9 @@ namespace
 
     // ── Line Sensor & Steering State ─────────────────────────────────
     static uint8_t latestLineMask = 0xFF;  // Active-low: 0=black line, 1=white background
+    static uint64_t lastLineDetectedAtMs = 0; // Timestamp of the most recent time a line was detected
+    static const uint64_t lostLineTimeoutMs = 800; // Time to retain last valid line reading after losing the line
+    static uint8_t previousLineMask = 0xFF;
     static bool lineReadValid     = false;
     static uint8_t lineTxError    = 0;
     static bool lineShortRead     = false;
@@ -167,13 +170,21 @@ namespace
             // Line follower inactive or zero speed commanded
             return;
         }
-
         // Safety Stop: No line detected (all 1s) or invalid read / off surface (all 0s)
         if (!lineReadValid || latestLineMask == 0xFF || latestLineMask == 0x00)
         {
-            setIndividualTargetSpeedsMmPerSec(0.0f, 0.0f);
-            prevNormError = 0.0f;
-            return;
+            // Retain a lost line for a small period of time to allow recovery from brief occlusions
+            if ((millis() - lastLineDetectedAtMs) > lostLineTimeoutMs)
+            {
+                setIndividualTargetSpeedsMmPerSec(0.0f, 0.0f);
+                prevNormError = 0.0f;
+                return;
+            }
+            latestLineMask = previousLineMask; // Use last valid line reading for steering
+        }else
+        {
+            lastLineDetectedAtMs = millis();
+            previousLineMask = latestLineMask;
         }
 
         // Calculate weighted line centroid
