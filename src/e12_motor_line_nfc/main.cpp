@@ -288,7 +288,7 @@ namespace
     {
         NfcAsync::Options options;
         options.clockHz = I2C_CLOCK_HZ;
-        options.gain = 6;                  // 43 dB receiver gain
+        options.gain = 3;                  // 23 dB receiver gain
         options.cachePointer = false;      // Ensure pointer asserted on shared bus with line sensor
         options.logInitialization = false;
         options.rfTimeoutUs = 1000;
@@ -297,7 +297,7 @@ namespace
         nfcRunning = nfcReader.begin(options);
         if (nfcRunning)
         {
-            Serial.println("# [DEBUG] NFC FM17550 initialized successfully (gain=43dB).");
+            Serial.println("# [DEBUG] NFC FM17550 initialized successfully (gain=23dB).");
         }
         else
         {
@@ -331,7 +331,7 @@ namespace
                 nfcReader.end();
                 NfcAsync::Options options;
                 options.clockHz = I2C_CLOCK_HZ;
-                options.gain = 6;
+                options.gain = 3;
                 options.cachePointer = false;
                 options.logInitialization = false;
                 nfcRunning = nfcReader.begin(options);
@@ -585,8 +585,8 @@ void setup()
 {
     // Initialize USB CDC Serial at 115200 baud
     Serial.begin(115200);
+    delay(1000); // 400 min to run properly, 1000 delay to see Serial on boot
     Serial.setTxTimeoutMs(0); // Zero timeout prevents blocking on full buffer
-    delay(400);
 
     Serial.println();
     Serial.println("==========================================================");
@@ -634,6 +634,11 @@ void setup()
     Serial.println("# Commands: S<mm/s> (speed), P<val> (PWM), STOP, STATUS, HELP");
     Serial.println("# Telemetry: P=<pwm>,L=<mm/s>,R=<mm/s>,LINE=<bits>,NFC=<uid|NONE>,AGE=<sec>,RATE=<Hz> @ 10 Hz");
     Serial.println("# Ready");
+
+    // Initialize robot to run at default speed
+    lineFollowerActive    = true;
+    commandedBaseSpeedMmS = 100.0f;
+    Serial.printf("# Initialized Speed at S=100.0 mm/s (Line Following Active)\n");
 }
 
 // ── Arduino Main Loop ────────────────────────────────────────────────
