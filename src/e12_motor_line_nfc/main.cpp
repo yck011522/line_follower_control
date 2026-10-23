@@ -44,7 +44,7 @@ namespace
     // ── Line Sensor & Steering State ─────────────────────────────────
     static uint8_t latestLineMask = 0xFF;  // Active-low: 0=black line, 1=white background
     static uint64_t lastLineDetectedAtMs = 0; // Timestamp of the most recent time a line was detected
-    static const uint64_t lostLineTimeoutMs = 800; // Time to retain last valid line reading after losing the line
+    static const uint64_t lostLineTimeoutMs = 1500; // Time to retain last valid line reading after losing the line
     static uint8_t previousLineMask = 0xFF;
     static bool lineReadValid     = false;
     static uint8_t lineTxError    = 0;
@@ -191,7 +191,7 @@ namespace
         // Weights: bit 7 = +3.5, bit 6 = +2.5, bit 5 = +1.5, bit 4 = +0.5,
         //          bit 3 = -0.5, bit 2 = -1.5, bit 1 = -2.5, bit 0 = -3.5
         static const float SENSOR_WEIGHTS[8] = {
-            -3.5f, -2.5f, -1.5f, -0.5f, 0.5f, 1.5f, 2.5f, 3.5f
+            -5.0f, -2.5f, -1.5f, -0.5f, 0.5f, 1.5f, 2.5f, 5.0f
         };
 
         float weightedSum = 0.0f;
