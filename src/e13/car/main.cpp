@@ -51,6 +51,8 @@ namespace
     constexpr uint32_t kBatteryDwellMs = 5000;
     constexpr uint32_t kLineLostGraceMs = 1500;
     constexpr bool kAutoStartOnBoot = false;
+    // false: black line on white background; true: white line on black background.
+    constexpr bool kLineIsWhiteOnBlack = true;
 
     enum ControllerState : uint8_t
     {
@@ -158,6 +160,9 @@ namespace
         if (received == 1 && Wire.available() == 1)
         {
             latestLineMask = static_cast<uint8_t>(Wire.read());
+            // Flip raw bits for white line on black background so the rest of
+            // the logic keeps its active-low (0 = line) convention.
+            if (kLineIsWhiteOnBlack) latestLineMask = ~latestLineMask;
             lineReadValid = true;
             lineTxError = 0;
             lineShortRead = false;
