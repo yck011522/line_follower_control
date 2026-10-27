@@ -1,9 +1,18 @@
-# Project working conventions
+# General development approach
+
+- **YAGNI** - Dont build it unless you need it.
+- **DRY** : Extract Patterns after second duplication, not before.
+- **Fail Fast** : Explicit error during development beats slient failures.
+- **Simple First** : Try the obvious solutions first, optimize later.
+- **Delete Aggresively** : Less code is fewer bugs.
+- **Semantic Naming** : Always name variables parameters and functions with verbose, self documenting names.
+
+# Firemware specific working conventions
 
 - Do not add host-side unit tests, mock hardware headers, or simulated-device
   test harnesses unless the user explicitly requests them. Use firmware builds
   and direct hardware experiments for verification.
-
+  
 - All new C++ files must have human-readable comments before every function and
   at critical points within functions, explaining purpose, timing, and non-obvious behavior.
 
