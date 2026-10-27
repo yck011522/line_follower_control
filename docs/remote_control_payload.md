@@ -70,7 +70,9 @@ BLE bytes: 34 12 02 01 03 05 00
 USB line:  W34120201030500\n
 ```
 
-The modem retains up to eight sequence numbers of already-submitted writes per peer, not eight queued payloads. Echoed `last_world_seq` values release these credits. If feedback stops, writes to that peer pause once the credits fill; other peers continue and BLE remains connected. Resuming feedback permits the latest unexpired snapshot to be submitted. The 1,000 ms expiry is measured from modem reception, not PC generation; it is not a car-side motor safety timeout.
+The modem retains up to eight sequence numbers of already-submitted writes per peer, not eight queued payloads. Echoed `last_world_seq` values release these credits. If feedback stops, writes to that peer pause once the credits fill; other peers continue and BLE remains connected. Resuming feedback permits the latest unexpired snapshot to be submitted. The modem's 1,000 ms expiry is measured from modem reception, not PC generation.
+
+The E13 car has a separate 500 ms World State safety timeout. If no valid World State reaches the car for 500 ms, it sets speed targets and retained turn indicators to zero while preserving AUTO or MANUAL mode. A later valid World State can command movement again. This timeout does not apply to a serial `S<mm/s>` override.
 
 
 ## Topology ID

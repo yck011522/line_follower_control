@@ -1,8 +1,8 @@
-# E13 BLE Telemetry Migration Plan
+# E13 BLE Telemetry
 
 ## Objective
 
-Move the proven Test 14 BLE transport into the E12 line-following firmware so
+Integrate the proven Test 14 BLE transport into the E12 line-following firmware so
 one modem can receive telemetry from zero to four cars. The existing E12 motor,
 line sensor, NFC, serial-control, and 100 Hz control-loop behavior remains
 local to each car. E13 adds BLE telemetry, World State selection of AUTO versus
@@ -32,7 +32,7 @@ The retained Test 14 evidence is in
 - Use the four-byte NFC UID and last-seen/age behavior documented in the
   protocol; unknown-tag classification and the UID lookup table are E14 work.
 
-## Proposed layout
+## Implemented layout
 
 ```text
 src/e13/
@@ -57,15 +57,17 @@ src/e13/
       styles.css                    Fixed four-card layout
 ```
 
-`platformio.ini` will add one modem environment plus four car environments.
-Each car environment sets only `BLE_CAR_ID` and its upload port. The car
-`main.cpp` keeps the settings visible together at its top:
+`platformio.ini` has one modem environment plus four car environments. Each
+car environment sets `BLE_CAR_ID`; car 1 and the modem are mapped to COM13 and
+COM15 for the current bench. The car `main.cpp` keeps the settings visible
+together near its top:
 
 - `BLE_CAR_ID` (build-time logical ID 1 through 4);
 - `kBleTelemetryPeriodMs` (50 ms);
 - configurable AUTO run target (initially 100 mm/s);
 - MANUAL base speed (50 mm/s) and gentle-turn steering magnitude (0.8);
-- optional automatic transition from STOPPED to AUTO after setup;
+- optional automatic transition from STOPPED to AUTO after setup (`false`
+  initially for safe stationary bring-up);
 - initial advertising interval/name behavior;
 - development serial diagnostic enablement; and
 - battery ADC and EMA settings described in the protocol.
@@ -82,12 +84,12 @@ It owns `NimBLEServer`, the World State and Robot State characteristics,
 advertising state, connection/subscription state, packet counters, and the
 Test 14 world-sequence loss window.
 
-Suggested public surface:
+Public API:
 
 ```cpp
 struct RobotTelemetrySnapshot {
-    uint8_t nfcMarker[4];
-    uint16_t nfcMarkerAgeMs;
+    uint8_t nfcUid[4];
+    uint16_t nfcAgeMs;
     uint8_t controllerState;
     uint8_t lineFollowerState;
     int16_t leftSpeedMmS;
@@ -97,16 +99,19 @@ struct RobotTelemetrySnapshot {
 
 class BleTelemetry {
 public:
-    bool begin();
+    bool begin(uint8_t carId);
     void service(uint32_t nowMs);
-    void publishIfDue(uint32_t nowMs, const RobotTelemetrySnapshot& snapshot);
+    void publishIfDue(uint32_t nowMs, uint32_t periodMs,
+                      const RobotTelemetrySnapshot& snapshot);
+    bool takeWorldState(Ble14::World& world);
     bool hasWorldState() const;
-    Ble14::World latestWorldState() const;
+    uint32_t worldStateAgeMs(uint32_t nowMs) const;
 };
 ```
 
-`begin()` creates exactly the tested service, characteristics, advertising
-metadata, MTU request, callbacks, and watchdog registration. `service()`
+`begin(carId)` creates the tested service, characteristics, advertising
+metadata, MTU request, and callbacks. The car main loop owns watchdog
+registration. `service()`
 restarts advertising after a disconnect and performs only periodic,
 non-blocking maintenance. `publishIfDue()` produces the Test 14 20 Hz
 notification and fills the packet's telemetry and last received World State
@@ -181,6 +186,13 @@ magnitude 0.8; a turn indicator without direction requests a zero-radius turn.
 Right takes precedence if both indicators are set. Serial `S<mm/s>` always
 selects AUTO, while bare `S` and `STOP` stop the car.
 
+The car-side World State timeout is 500 ms. It zeros World State-derived
+speed targets and turn indicators without changing AUTO/MANUAL mode. Serial
+speed commands are not expired by this timer. Battery voltage is sampled from
+D10 every 100 Hz tick using the documented 100k/22k divider and EMA `k=0.02`;
+LOW_BATT enters below 9.5 V for five seconds and recovers above 10.0 V for
+five seconds into AUTO at zero speed.
+
 Enter LOW_BATT after filtered voltage remains below 9.5 V for five seconds;
 return to AUTO after it remains above 10.0 V for five seconds. Preserve E12's
 1.5-second line-loss grace period. LINE_LOST saves the previously selected
@@ -207,44 +219,52 @@ lastValidPacket, lastReceivedAt, decodedRobotState, parseErrorCount
 ```
 
 It broadcasts those records over WebSocket. The browser owns a fixed card for
-each car ID and refreshes age locally at least four times per second:
+each car ID and refreshes age four times per second. It also exposes a
+per-car World State movement control and topology ID field; the Node server
+transmits the shared World State at 50 Hz. Movement defaults to AUTO with
+forward clear, so the initial command is stationary.
 
 - no valid packet since page/server start: `No data`;
 - valid packet: render telemetry and `last data age`;
-- age above a documented stale threshold: retain the last values but label the
+- age above 1,000 ms: retain the last values but label the
   card `Stale`;
 - absent, disconnected, or later-returning cars need no special modem message.
 
 This directly supports zero through four present cars and prevents a car's
-absence from shifting other cars' panels. The initial dashboard is
-monitor-only: it emits no World State lines and therefore cannot command
-motion. Sending World State/control belongs in a later, separately gated UI
-feature.
+absence from shifting other cars' panels. When the dashboard is stopped or
+disconnected, the car-side 500 ms timeout zeros World State-derived speed and
+turn targets.
+
+To install dependencies, open a terminal in `src/e13/pc-ui` and run
+`npm install`. Then double-click `start-dashboard.bat` to start the dashboard,
+or run `npm start` in that folder. Keep the console window open while using
+the dashboard; press Ctrl+C to stop the server. The default modem port is
+`COM15`; `MODEM_PORT` and `HTTP_PORT` can override the serial and dashboard
+ports. It binds to loopback at `http://127.0.0.1:8080`.
 
 ## Migration sequence
 
 1. Copy the Test 14 protocol/watchdog/modem configuration headers and modem
    source into E13 without semantic edits. Add E13 PlatformIO profiles and
-   verify the modem build before hardware flashing.
-2. Copy E12 car sources into `e13/car`. Build this copied baseline before
-   integrating BLE, preserving the known-good E12 behavior.
+   build the modem.
+2. Copy E12 car sources into `e13/car`, preserving the existing motor-control
+   implementation and hardware calibration.
 3. Extract the Test 14 car's BLE server, callback classes, advertising, world
    accounting, notification cadence, and watchdog use into `BleTelemetry`.
    Keep its tests' timing and packet validation intact.
 4. Integrate `BleTelemetry` into E13 `main.cpp` without moving the 100 Hz
    control path or asynchronous NFC service into callbacks.
-5. Implement only the agreed real-field mappings. Leave unavailable data
-   explicitly unavailable according to the documented protocol decision; do
-   not substitute Test 14 constants.
+5. Implement the agreed controller, line-loss, battery, timeout, and real
+   telemetry mappings; do not substitute Test 14 synthetic constants.
 6. Build all five firmware profiles. Flash and assess one stationary,
    wheel-supported car plus modem before introducing additional cars.
 7. Re-run the Test 14 communication qualification cases against E13 car
    firmware: nominal four-car, missing start, individual/double reconnect,
    idle, mailbox expiry/coalescing, and watchdog recovery. Keep raw captures
    and mark incomplete runs rather than overwriting historical evidence.
-8. Implement the Node dashboard, first against recorded Test 14 modem hex
-   lines and then against the live modem. Verify all five presence states
-   (zero, one, two, three, four) and stale-age behavior.
+8. Run the Node dashboard against recorded modem hex lines and then against
+   the live modem. Verify all five presence states (zero through four) and
+   stale-age behavior.
 9. Run a bounded live line-following observation only after stationary BLE
    verification succeeds. Motion must be started by an explicit existing
    command, stopped on failure/cancellation, and logged as a distinct

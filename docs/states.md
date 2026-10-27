@@ -32,11 +32,17 @@ NFC-driven branch/merge navigation is the planned E14 extension.
 | `LOW_BATT` | Filtered battery > 10.0 V continuously for 5 s | `AUTO` | Clear the safety override and return to AUTO. |
 | Any state except `LOW_BATT` | Serial `S<speed>` | `AUTO` | Set the AUTO run target to the supplied speed. |
 | Any state except `LOW_BATT` | Serial bare `S` or `STOP` | `STOPPED` | Set the run target to zero and stop both motors. |
+| `AUTO` or `MANUAL` controlled by World State | No valid World State for 500 ms | Keep current mode | Set speed targets and retained turn indicators to zero; a later World State can command movement again. |
 
 The mode bit is a value, not a toggle: every valid World State with `auto=1`
 selects AUTO; `auto=0` selects MANUAL. LOW_BATT overrides World State and
 serial mode/speed commands until its recovery condition is met. On recovery it
-always returns to AUTO.
+always returns to AUTO with a zero speed target. A subsequent valid World State
+or serial speed command is needed to request motion.
+
+The 500 ms timeout is a car-side safety rule, separate from the modem's
+1,000 ms mailbox expiry. It applies only while the current command source is
+World State; a serial `S<speed>` command is not expired by this timer.
 
 ### Movement behavior by mode
 
@@ -145,7 +151,8 @@ NFC-driven branch/merge transitions in the tables above. The full planned
 line-state table is included now to review behavior without implying that
 E13 already supports the E14 navigation states.
 
-Verify E13 with World State mode changes, AUTO forward/stop targets, manual
+Verify E13 with World State mode changes, AUTO forward/stop targets, the
+500 ms World State timeout and recovery, manual
 direction/turn combinations, serial AUTO/STOP commands, LOW_BATT entry and
 recovery dwell times, and line-loss grace/recovery. Verify the NFC transition
 table on E14 with GO, all branch and merge types, unknown UIDs, the 50 ms
