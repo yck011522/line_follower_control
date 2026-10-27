@@ -6,6 +6,7 @@
 | [Motor settings and tuning](motor-settings.md) | Adopted settings, persistent PID exception, E0 evidence, RTS-off rule |
 | [Hardware and pins](hardware.md) | Wiring intent, pin namespaces, buses, power, and missing hardware details |
 | [Communication](communication.md) | World-state/telemetry semantics and pending wire protocol decisions |
+| [State transitions](states.md) | E13 controller modes, line-loss handling, and planned E14 NFC navigation transitions |
 | [Testing](testing.md) | PlatformIO environment plan, deterministic Python workflow, and measurements |
 | [E0 motor PID tuning](../test/E0_motor_tuning/README.md) | Direct USB serial PID candidates, step responses, and Matplotlib plots |
 | [E1 motor test plan](../test/E1_motor_communication/PLAN.md) | M2/M4 speed, encoder feedback, stop, and 100/400 kHz comparison |
