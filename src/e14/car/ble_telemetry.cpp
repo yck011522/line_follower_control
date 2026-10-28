@@ -146,6 +146,7 @@ void BleTelemetry::publishIfDue(uint32_t nowMs, uint32_t periodMs, const RobotTe
 
     memcpy(packet.nfc, snapshot.nfcUid, sizeof(packet.nfc));
     packet.nfcAge = snapshot.nfcAgeMs;
+    packet.lineSensorMask = snapshot.lineSensorMask;
     packet.controllerState = snapshot.controllerState;
     packet.lineFollowerState = snapshot.lineFollowerState;
     packet.leftSpeed = snapshot.leftSpeedMmS;

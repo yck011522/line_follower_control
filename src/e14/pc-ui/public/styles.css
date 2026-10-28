@@ -1,0 +1,43 @@
+:root {
+  color-scheme: dark;
+  font: 16px/1.45 system-ui, sans-serif;
+  background: #101820;
+  color: #e9f1f5;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; padding: 1.5rem; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+h1, h2, p { margin: 0; }
+h1 { font-size: 1.7rem; }
+header p { color: #9eb1bb; }
+.status { display: flex; align-items: center; gap: 1rem; }
+.pill { border: 1px solid #71838d; border-radius: 999px; padding: .35rem .7rem; color: #c2d0d6; }
+.pill.good { color: #9ce0b1; border-color: #3a9860; }
+.pill.bad { color: #ffaaa1; border-color: #c25c50; }
+.cars { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; }
+.car-card { background: #1a2832; border: 1px solid #314550; border-radius: .8rem; padding: 1rem; }
+.card-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .8rem; }
+h2 { font-size: 1.2rem; }
+.presence { color: #9ce0b1; font-size: .85rem; }
+.presence.stale { color: #ffc078; }
+dl { display: grid; grid-template-columns: 1fr 1.2fr; gap: .25rem .75rem; margin: 0 0 1rem; }
+dt { color: #9eb1bb; }
+dd { margin: 0; overflow-wrap: anywhere; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; border-top: 1px solid #314550; padding-top: .8rem; }
+.line-sensor { display: flex; justify-content: center; gap: .35rem; margin: 0 0 1rem; }
+.sensor-cell { display: flex; flex-direction: column; align-items: center; width: 1.7rem; }
+.sensor-dot { width: 1.5rem; height: 1.5rem; border-radius: 50%; border: 2px solid #8da0aa; }
+.sensor-dot.line { background: #000; }
+.sensor-dot.ground { background: #fff; }
+.sensor-dot.unknown { background: #3a4a54; border-style: dashed; }
+.edge-marker { height: 1.1rem; line-height: 1.1rem; color: #ffc078; font-size: .9rem; }
+label { display: inline-flex; align-items: center; gap: .35rem; }
+select, input[type="number"], button { color: inherit; background: #263a46; border: 1px solid #526873; border-radius: .35rem; padding: .35rem .5rem; }
+input[type="number"] { width: 5rem; }
+button { cursor: pointer; }
+button:hover { background: #365264; }
+@media (max-width: 650px) {
+  body { padding: 1rem; }
+  header { align-items: flex-start; flex-direction: column; }
+}

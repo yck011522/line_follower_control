@@ -185,7 +185,7 @@ Each car sends one Robot State packet at approximately **20 Hz**.
 | `world_packets_lost_5s` | `0-255` | 1 | uint8 | Number of missing World State sequence numbers detected during the most recently completed five-second measurement window, saturated at 255. The reported value remains fixed until the next five-second window completes. Sequence gaps include intentionally superseded World States and do not identify radio loss alone. |
 | `nfc_marker_id` | 4 raw bytes | 4 | bytes | The last successfully detected NFC tag UID, as tested in E9b. Retain the last UID after the tag leaves the reader; report four zero bytes if no UID has been detected since boot. |
 | `nfc_marker_age_ms` | `0-65535` | 2 | uint16 | Milliseconds since the last successful NFC UID detection, saturated at 65535. Initialize to 65535 at boot; it continues increasing after the tag leaves the reader. |
-| `reserved` | `0` | 1 | uint8 | Reserved; transmit zero. |
+| `line_sensor_mask` | `0-255` | 1 | uint8 | E14 line-sensor view: bit set (`1`) means the sensor sees the line; bit 7 is the leftmost sensor and bit 0 the rightmost. Polarity already accounts for the black/white line setting. E13 firmware transmits zero. |
 | `controller_state` | See Controller State | 1 | uint8 | Current high-level operating mode or safety state. |
 | `line_follower_state` | See Line Follower State | 1 | uint8 | Current line-following/intersection state. |
 | `left_speed_mm_s` | signed integer, `-32768` to `32767` | 2 | int16 | Current measured left-wheel speed in mm/s, derived from encoder feedback. Positive and negative signs indicate direction. |
@@ -202,7 +202,7 @@ Python packing is `<BHHB4sHBBhhH`, with no alignment padding:
 | 5 | `world_packets_lost_5s` |
 | 6–9 | `nfc_marker_id` |
 | 10–11 | `nfc_marker_age_ms` |
-| 12 | `reserved` |
+| 12 | `line_sensor_mask` |
 | 13 | `controller_state` |
 | 14 | `line_follower_state` |
 | 15–16 | `left_speed_mm_s` |

@@ -6,6 +6,7 @@
 struct RobotTelemetrySnapshot {
     uint8_t nfcUid[4]{};
     uint16_t nfcAgeMs = UINT16_MAX;
+    uint8_t lineSensorMask = 0; // 1 = line under sensor, bit 7 = leftmost
     uint8_t controllerState = 0;
     uint8_t lineFollowerState = 0;
     int16_t leftSpeedMmS = 0;

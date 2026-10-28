@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>E14 Car Telemetry</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>E14 Car Telemetry</h1>
+      <p>BLE modem → USB serial · Four logical car slots</p>
+    </div>
+    <div class="status">
+      <span id="serial-status" class="pill">Connecting…</span>
+      <label>Topology <input id="topology" type="number" min="0" max="255" value="0"></label>
+    </div>
+  </header>
+  <main id="cars" class="cars"></main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

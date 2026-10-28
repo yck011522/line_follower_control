@@ -547,6 +547,8 @@ namespace
         memcpy(snapshot.nfcUid, latestNfcUid, sizeof(snapshot.nfcUid));
         const uint64_t ageMs = nfcAgeUs(nowUs) / 1000;
         snapshot.nfcAgeMs = ageMs > UINT16_MAX ? UINT16_MAX : static_cast<uint16_t>(ageMs);
+        // Active-low internal mask -> 1 = line; an invalid read reports no line.
+        snapshot.lineSensorMask = lineReadValid ? static_cast<uint8_t>(~latestLineMask) : 0;
         snapshot.controllerState = static_cast<uint8_t>(controllerState);
         snapshot.lineFollowerState = static_cast<uint8_t>(lineFollowerState);
         snapshot.leftSpeedMmS = static_cast<int16_t>(lroundf(getLeftMotorSpeedMmS()));

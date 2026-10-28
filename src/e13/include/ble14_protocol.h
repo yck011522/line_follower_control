@@ -27,7 +27,7 @@ struct Robot {
     uint8_t worldLostPrevious5s;
     uint8_t nfc[4];
     uint16_t nfcAge;
-    uint8_t reserved;
+    uint8_t lineSensorMask; // E14: 1 = line under sensor, bit 7 = leftmost; E13 sends zero
     uint8_t controllerState;
     uint8_t lineFollowerState;
     int16_t leftSpeed;
