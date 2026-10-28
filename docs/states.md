@@ -115,7 +115,7 @@ tables below define their exact meanings.
 | `FOLLOW_LINE` | Any BRANCH subtype | `APPROACHING_BRANCH` while visible |
 | `FOLLOW_LINE` | MERGE_LEFT / MERGE_RIGHT / MERGE_CENTER | Matching `MERGING_FROM_*` state |
 | `APPROACHING_BRANCH` | Same branch tag remains visible | Remain `APPROACHING_BRANCH` while age is <= 50 ms. |
-| `APPROACHING_BRANCH` | Branch tag age exceeds 50 ms | Select `BRANCHING_LEFT`, `BRANCHING_RIGHT`, or `BRANCHING_CENTER` using the latest turn indicators; right wins if both are set, neither means center. |
+| `APPROACHING_BRANCH` | Branch tag age exceeds 50 ms | Select `BRANCHING_LEFT`, `BRANCHING_RIGHT`, or `BRANCHING_CENTER` using the latest turn indicators: left only is left, right only is right, and both or neither is center. In E14 bring-up (no NFC), AUTO World State turn bits select these states directly. |
 | Any `BRANCHING_*` state | GO or unknown UID | `FOLLOW_LINE` |
 | Any `BRANCHING_*` state | Any BRANCH subtype | `APPROACHING_BRANCH` |
 | Any `BRANCHING_*` state | Any MERGE type | Matching `MERGING_FROM_*` state |

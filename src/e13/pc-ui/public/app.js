@@ -2,7 +2,7 @@ const carsElement = document.querySelector("#cars");
 const serialStatus = document.querySelector("#serial-status");
 const topologyInput = document.querySelector("#topology");
 const controllerNames = { 0: "AUTO", 1: "MANUAL", 14: "LOW_BATT", 15: "STOPPED" };
-const lineNames = { 0: "FOLLOW_LINE", 10: "LINE_LOST" };
+const lineNames = { 0: "FOLLOW_LINE", 4: "BRANCHING_CENTER", 5: "BRANCHING_LEFT", 6: "BRANCHING_RIGHT", 10: "LINE_LOST" };
 let socket;
 let currentCars = Array.from({ length: 4 }, (_, index) => ({
   robotId: index + 1,
