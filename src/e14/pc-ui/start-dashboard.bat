@@ -27,7 +27,16 @@ if not exist "node_modules\serialport\package.json" (
     exit /b 1
 )
 
-echo Starting E14 dashboard at http://127.0.0.1:8080
+set "MODEM_PORT=%~1"
+if not defined MODEM_PORT (
+    echo Available serial ports:
+    node.exe list-serial-ports.mjs
+    echo.
+    set /p "MODEM_PORT=Modem COM port [COM15]: "
+)
+if not defined MODEM_PORT set "MODEM_PORT=COM15"
+
+echo Starting E14 dashboard at http://127.0.0.1:8080 using modem %MODEM_PORT%
 echo Keep this window open while using the dashboard. Press Ctrl+C to stop it.
 call npm.cmd start
 set "EXIT_CODE=%ERRORLEVEL%"
