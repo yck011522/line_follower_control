@@ -218,11 +218,17 @@ The packing format and offsets above describe the E13 Robot State packet. The or
 | --- | --- | --- |
 | `0` | `AUTO` | Automatic mode. The car listens to World State movement commands; the local line-follower controller determines motor outputs. The forward bit selects the run target or 0 mm/s without changing AUTO state. |
 | `1` | `MANUAL` | Manual mode. The car listens to World State movement commands and directly controls wheel movement at the fixed 50 mm/s base speed, without line-following steering. See movement-command semantics. |
+| `11` | `NFC_REINIT_PERIODIC` | E15: stopped for the due periodic NFC reinitialization. |
+| `12` | `NFC_REINIT_I2C_ERROR` | E15: stopped after an NFC I2C error or initial reader failure. |
+| `13` | `NFC_REINIT_INVALID_TRANSITION` | E15: stopped after an unexpected or unknown UID. |
 | `14` | `LOW_BATT` | Safety state entered when filtered battery voltage remains below 9.5 V for five seconds. Motor movement is stopped. Return to `AUTO` after filtered voltage remains above 10.0 V for five seconds. |
 | `15` | `STOPPED` | No motor movement is commanded. Used during boot/setup and when a stop command is received. |
 
 `AUTO` and `MANUAL` are operating modes selected by World State. `LOW_BATT`
 and `STOPPED` take precedence over those modes and prevent movement.
+E15 recovery states also prevent movement. They use the existing byte and do
+not change the packet layout. See [E15 firmware](../src/e15/car/README.md)
+for timing, transition rules, and the post-recovery command interlock.
 
 ## Line Follower State - `line_follower_state`
 

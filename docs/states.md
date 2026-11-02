@@ -6,6 +6,9 @@ There are two independent state values:
 - **Line-follower state** says what navigation behavior AUTO mode should use.
 
 E13 implements AUTO/MANUAL, LOW_BATT, STOPPED, FOLLOW_LINE, and LINE_LOST.
+E15 additionally reports controller states 11 `NFC_REINIT_PERIODIC`, 12
+`NFC_REINIT_I2C_ERROR`, and 13 `NFC_REINIT_INVALID_TRANSITION`; their
+recovery behavior is documented in [E15 firmware](../src/e15/car/README.md).
 NFC-driven branch/merge navigation is the planned E14 extension.
 
 ## 1. Controller state

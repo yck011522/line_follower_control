@@ -6,6 +6,8 @@ node_modules/
 
 # E14 dashboard experiment logs
 src/e14/pc-ui-logs/
+# E15 dashboard experiment logs
+src/e15/pc-ui-logs/
 
 # Python environments and caches
 .venv/
