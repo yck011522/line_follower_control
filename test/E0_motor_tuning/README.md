@@ -92,9 +92,9 @@ E0 deliberately keeps zero-speed PID active between trials so zero-speed
 oscillation is visible, and releases the outputs at the end.
 
 **The historical E1 firmware configures 500 encoder lines at startup.** It can
-replace the 2000-line setup used here. Revised E2 reapplies the adopted 2000-line
-setting. The motor's 500 ppr specification and the driver's configured 2000 are
-distinct quantities; see the [project motor baseline](../../docs/motor-settings.md).
+replace the 2000-line setup used here. The motor's 500 ppr specification and the
+driver's 2000-line setup used here are distinct quantities. Current E2 settings
+are defined in [MotorSettings.h](../../lib/MotorDriver/include/MotorSettings.h).
 
 ## Results and comparison
 

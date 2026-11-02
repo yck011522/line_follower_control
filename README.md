@@ -55,7 +55,8 @@ at ESP32 boot, and relies on the driver's saved **PID 3 / 0.375 / 0.5**.
 Its fixed M2/M4 sweep covers **-100 to +100 in steps of 10**, returning to zero
 between targets. Python captures encoder feedback and plots commanded versus
 measured speed. See the [E2 guide](test/E2_motor_speed/README.md) and the
-[project motor settings and E0 findings](docs/motor-settings.md).
+[current motor settings](lib/MotorDriver/include/MotorSettings.h) and
+[E0 findings](test/E0_motor_tuning/README.md).
 All Python test connections must set **RTS off before opening the port**.
 
 The E8 [FM17550 I2C UID poller](src/e8_nfc_fm17550_i2c/README.md) continuously

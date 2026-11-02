@@ -18,7 +18,8 @@ was absent at boot. There are no interactive tuning or PWM/manual-speed options.
 PID in the supplied register map. `configured=1` means the I2C writes succeeded;
 it does not verify stored PID or read back the write-only settings. Replacing or
 factory-resetting the board invalidates the stored-PID assumption. See
-[project motor settings and E0 findings](../../docs/motor-settings.md).
+[current motor settings](../../lib/MotorDriver/include/MotorSettings.h) and
+[E0 findings](../E0_motor_tuning/README.md).
 
 ## Build, upload, run
 

@@ -9,7 +9,7 @@ is used. Boot rewrites five I2C settings; PID 3/0.375/0.5 is assumed in driver f
 encoder counts and actual timestamps. No automatic motion at boot, no runtime tuning options.
 
 See the [E2 operator guide](../../test/E2_motor_speed/README.md) and
-[project motor settings](../../docs/motor-settings.md).
+[project motor settings](../../lib/MotorDriver/include/MotorSettings.h).
 
 The firmware calls `initialize()` after starting I2C and permits motion only
 after successful configuration. Commands use `setWheelSpeedsMmPerSecond()`;

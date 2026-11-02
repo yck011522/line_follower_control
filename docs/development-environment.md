@@ -52,7 +52,7 @@ then call `open()`. Keep RTS off throughout the session. Do not set it only afte
 opening. `rtscts=False` disables flow control but does not set RTS low.
 E2 opens only the ESP32 USB port (historically COM4); E0 used driver USB COM5.
 Recheck port enumeration after changing cables. Firmware upload/reset tooling is
-separate from these test-port rules. See [motor settings](motor-settings.md).
+separate from these test-port rules. See the [testing workflow](testing.md).
 
 
 ## E3 Arduino 3.3.12 migration (2026-10-01)

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-// Adopted baseline: docs/motor-settings.md. Reapplied over I2C at each boot.
+// Adopted driver baseline, reapplied over I2C at each boot.
 namespace MotorSettings
 {
   constexpr uint8_t motorType = 1; // Driver's 520-motor preset.

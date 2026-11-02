@@ -2,10 +2,11 @@
 
 ## Current project baseline (2026-09-30)
 
-The adopted driver settings are type **1**, dead zone **1650**, pulse line
+The driver settings documented on 2026-09-30 were type **1**, dead zone **1650**, pulse line
 **2000**, gear ratio (`Pulse_Phase`) **23**, diameter **65 mm**, and PID
-**3 / 0.375 / 0.5**. See [project motor settings](../docs/motor-settings.md) for
-E0 evidence and limits. E2 uses I2C only, rewriting the five I2C-accessible
+**3 / 0.375 / 0.5**. See [E0 findings](../test/E0_motor_tuning/README.md) for
+evidence and limits, and [current driver settings](../lib/MotorDriver/include/MotorSettings.h).
+E2 uses I2C only, rewriting the five I2C-accessible
 settings at boot while explicitly relying on saved PID. It does not use motor
 serial commands. Hardware specifications below are distinct from these settings.
 

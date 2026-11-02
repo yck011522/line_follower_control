@@ -15,8 +15,8 @@ The `test/` directory is intended for host-driven hardware experiments. If Platf
 Every Python test connection to the driver or ESP32 must set `rts=False` before
 opening the port (`serial.Serial(port=None, ...)`, DTR on, RTS off, then open).
 Disabling hardware flow control alone is insufficient. Use bounded waits and
-attempt stop/release on cancellation. See [motor settings](motor-settings.md)
-for the tested parameters and the explicit exception that E2 relies on saved PID.
+attempt stop/release on cancellation. See the [E2 motor speed guide](../test/E2_motor_speed/README.md)
+for its settings and the explicit exception that E2 relies on saved PID.
 The active E2 workflow is implemented in `test/E2_motor_speed/capture.py`; it
 captures schema-2 logs, analyzes encoder speed, and writes `summary.png`.
 
