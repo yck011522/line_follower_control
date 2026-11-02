@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 import { WebSocketServer } from "ws";
+import { createCsvLogger } from "./csv-logger.mjs";
 
 const root = fileURLToPath(new URL("./public/", import.meta.url));
 const portName = process.env.MODEM_PORT ?? "COM15";
@@ -17,12 +18,28 @@ let serialReady = false;
 let serialError = null;
 let serialWritePending = false;
 const clients = new Set();
+let loggingStatus = { name: null, error: null };
+let logger;
 
 function broadcast(message) {
   const encoded = JSON.stringify(message);
   for (const client of clients) {
     if (client.readyState === 1) client.send(encoded);
   }
+}
+
+function reportLoggingError(error) {
+  console.error("CSV recording failed:", error);
+  loggingStatus = { ...loggingStatus, error: error.message };
+  broadcast({ type: "logging", ...loggingStatus });
+}
+
+try {
+  logger = createCsvLogger(fileURLToPath(new URL("../pc-ui-logs/", import.meta.url)), reportLoggingError);
+  loggingStatus.name = logger.name;
+  console.log(`Recording CSV files in src/e14/pc-ui-logs: ${logger.name}`);
+} catch (error) {
+  reportLoggingError(error);
 }
 
 function decodeRobotState(line) {
@@ -78,7 +95,7 @@ function sendSnapshot(socket) {
       ? { ...current, ageMs: now - current.receivedAt, movement: movement[index] }
       : { robotId, ageMs: null, movement: movement[index] };
   });
-  socket.send(JSON.stringify({ type: "snapshot", serialReady, serialError, topology, cars }));
+  socket.send(JSON.stringify({ type: "snapshot", serialReady, serialError, logging: loggingStatus, topology, cars }));
 }
 
 const modemPort = new SerialPort({
@@ -93,8 +110,10 @@ parser.on("data", (rawLine) => {
   const line = rawLine.trim();
   const packet = decodeRobotState(line);
   if (!packet) return;
-  telemetry.set(packet.robotId, { ...packet, receivedAt: Date.now() });
-  broadcast({ type: "telemetry", packet, receivedAt: Date.now() });
+  const receivedAt = new Date();
+  logger?.logTelemetry(packet, receivedAt);
+  telemetry.set(packet.robotId, { ...packet, receivedAt: receivedAt.getTime() });
+  broadcast({ type: "telemetry", packet, receivedAt: receivedAt.getTime() });
 });
 
 modemPort.on("error", (error) => {
@@ -158,6 +177,7 @@ webSocketServer.on("connection", (socket) => {
     if (message.type === "movement" && Number.isInteger(message.car) &&
         message.car >= 1 && message.car <= 4 && Number.isInteger(message.value) &&
         message.value >= 0 && message.value <= 0x1f) {
+      logger?.logMovementChange(message.car, movement[message.car - 1], message.value, new Date());
       movement[message.car - 1] = message.value;
     } else if (message.type === "topology" && Number.isInteger(message.value) &&
                message.value >= 0 && message.value <= 0xff) {
@@ -176,22 +196,42 @@ const snapshotTimer = setInterval(() => {
       ? { ...current, ageMs: now - current.receivedAt, movement: movement[index] }
       : { robotId, ageMs: null, movement: movement[index] };
   });
-  broadcast({ type: "snapshot", serialReady, serialError, topology, cars });
+  broadcast({ type: "snapshot", serialReady, serialError, logging: loggingStatus, topology, cars });
 }, 250);
 
 httpServer.listen(httpPort, "127.0.0.1", () => {
   console.log(`E14 dashboard listening at http://127.0.0.1:${httpPort} (modem ${portName})`);
 });
 
-for (const signal of ["SIGINT", "SIGTERM"]) {
-  process.on(signal, () => {
-    clearInterval(worldTimer);
-    clearInterval(snapshotTimer);
+const worldTimer = setInterval(sendWorldState, 20);
+
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  clearInterval(worldTimer);
+  clearInterval(snapshotTimer);
+  for (const client of clients) client.terminate();
+  webSocketServer.close();
+  const serverClosed = new Promise((resolve) => httpServer.close(resolve));
+  const serialClosed = new Promise((resolve) => {
+    if (!modemPort.isOpen) return resolve();
     modemPort.close((error) => {
-      if (error) console.error("Error closing modem serial port:", error);
-      httpServer.close(() => process.exit(error ? 1 : 0));
+      if (error) {
+        console.error("Error closing modem serial port:", error);
+        process.exitCode = 1;
+      }
+      resolve();
     });
   });
+  try {
+    await logger?.close();
+  } catch (error) {
+    process.exitCode = 1;
+  }
+  await Promise.all([serverClosed, serialClosed]);
 }
 
-const worldTimer = setInterval(sendWorldState, 20);
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => void shutdown());
+}

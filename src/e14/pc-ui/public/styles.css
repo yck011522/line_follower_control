@@ -11,7 +11,7 @@ header { display: flex; justify-content: space-between; align-items: center; gap
 h1, h2, p { margin: 0; }
 h1 { font-size: 1.7rem; }
 header p { color: #9eb1bb; }
-.status { display: flex; align-items: center; gap: 1rem; }
+.status { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
 .pill { border: 1px solid #71838d; border-radius: 999px; padding: .35rem .7rem; color: #c2d0d6; }
 .pill.good { color: #9ce0b1; border-color: #3a9860; }
 .pill.bad { color: #ffaaa1; border-color: #c25c50; }

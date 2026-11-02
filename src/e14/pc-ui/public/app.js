@@ -1,5 +1,6 @@
 const carsElement = document.querySelector("#cars");
 const serialStatus = document.querySelector("#serial-status");
+const loggingStatus = document.querySelector("#logging-status");
 const topologyInput = document.querySelector("#topology");
 const controllerNames = { 0: "AUTO", 1: "MANUAL", 14: "LOW_BATT", 15: "STOPPED" };
 const LINE_STATE_BRANCHING_LEFT = 5;
@@ -161,10 +162,13 @@ function connect() {
   });
   socket.addEventListener("message", ({ data }) => {
     const message = JSON.parse(data);
-    if (message.type === "serial") {
+    if (message.type === "logging") {
+      updateLoggingStatus(message);
+    } else if (message.type === "serial") {
       serialStatus.textContent = message.ready ? `Modem ${message.port} ready` : `Modem unavailable${message.error ? `: ${message.error}` : ""}`;
       serialStatus.className = message.ready ? "pill good" : "pill bad";
     } else if (message.type === "snapshot") {
+      updateLoggingStatus(message.logging);
       topologyInput.value = message.topology;
       if (message.serialReady) {
         serialStatus.textContent = "Modem serial ready";
@@ -196,8 +200,17 @@ function connect() {
   socket.addEventListener("close", () => {
     serialStatus.textContent = "Dashboard disconnected";
     serialStatus.className = "pill bad";
+    loggingStatus.textContent = "Recording status unknown: dashboard disconnected";
+    loggingStatus.className = "pill bad";
     setTimeout(connect, 1000);
   });
+}
+
+function updateLoggingStatus(status) {
+  loggingStatus.textContent = status.error
+    ? `Recording failed: ${status.error}`
+    : `Recording: ${status.name}`;
+  loggingStatus.className = status.error ? "pill bad" : "pill good";
 }
 
 topologyInput.addEventListener("change", () => {

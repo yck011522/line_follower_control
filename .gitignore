@@ -4,6 +4,9 @@
 # Node.js dependencies
 node_modules/
 
+# E14 dashboard experiment logs
+src/e14/pc-ui-logs/
+
 # Python environments and caches
 .venv/
 venv/
