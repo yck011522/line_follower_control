@@ -1,5 +1,9 @@
 # E7 manual-push data collection
 
+> Retired: the firmware and build environments were removed with the legacy
+> I2C motor-driver library. The instructions below are historical; recordings
+> and the PC recording tool remain.
+
 Car **1** uses one 100 Hz schedule: release motor outputs, read the E6 raw line
 sensor byte, read cumulative M2/M4 encoders, calculate mm/s, and send telemetry.
 There are no powered-motion commands. Acquisition continues before discovery;
@@ -40,7 +44,7 @@ different channel, ESP-NOW delivery is not guaranteed; check AP/channel first.
   bit 0 is X8; retain all eight channels for offline analysis.
 - Motor driver: Wire, SDA D4, SCL D5, 400 kHz, 1 ms timeout. Reapply type 1,
   dead zone 1650, pulse line 500, ratio 23, diameter 65 mm at every boot via
-  `MotorDriver::initialize()`. PID 3/0.375/0.5 is **stored_unverified**.
+  the former driver's initializer. PID 3/0.375/0.5 is **stored_unverified**.
 - M2 is left, M4 is right. Counts are the driver's signed cumulative positions,
   read with the existing high/low/high consistency check. E7 does not zero them.
 - Speed is `delta_counts * pi * 65 / 44998 / elapsed_seconds`, using the earlier

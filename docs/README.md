@@ -3,7 +3,6 @@
 | Document | Purpose |
 | --- | --- |
 | [System design](system-design.md) | Architecture, rates, steering behavior, and integration boundaries |
-| [Motor settings](../lib/MotorDriver/include/MotorSettings.h) | Driver settings and stored PID assumptions |
 | [Hardware and pins](hardware.md) | Wiring intent, pin namespaces, buses, power, and missing hardware details |
 | [Communication](communication.md) | World-state/telemetry semantics and pending wire protocol decisions |
 | [State transitions](states.md) | E13 controller modes, line-loss handling, and planned E14 NFC navigation transitions |

@@ -1,9 +1,9 @@
-> Archived: source and historical results are preserved. The old API and byte-order diagnostics are no longer maintained; E1 has no active build environment. Use E2 for motor testing.
+> Retired: the firmware and its library have been removed. Historical results remain.
 
 # E1 firmware — motor driver
 
-One interactive firmware covers the 100/400 kHz communication checks, manual wheel rotation, and 5-second M2/M4 or both-motor runs. Uses the shared `lib/MotorDriver` register interface. Startup automatically configures the driver and releases outputs; motion requires serial commands. During motion, speed commands are refreshed at 50 Hz.
+The former interactive firmware covered 100/400 kHz communication checks, manual wheel rotation, and 5-second M2/M4 or both-motor runs.
 
-Build/upload environment: `e1_motor_communication`. Motor SDA/SCL: D4/D5. Serial: 115200 over USB. See the [operator guide](../../test/E1_motor_communication/README.md) for commands, current assumptions, and limitations.
+Motor SDA/SCL were D4/D5. Serial was 115200 over USB. See the historical [operator guide](../../test/E1_motor_communication/README.md) for commands and limitations.
 
 Host automation and results: [test/E1_motor_communication](../../test/E1_motor_communication/README.md).

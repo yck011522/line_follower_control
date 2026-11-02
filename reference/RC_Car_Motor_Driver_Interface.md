@@ -1,12 +1,12 @@
 # RC Car Motor Driver and Motor Interface
 
-## Current project baseline (2026-09-30)
+## Historical driver baseline (2026-09-30)
 
 The driver settings documented on 2026-09-30 were type **1**, dead zone **1650**, pulse line
 **2000**, gear ratio (`Pulse_Phase`) **23**, diameter **65 mm**, and PID
 **3 / 0.375 / 0.5**. See [E0 findings](../test/E0_motor_tuning/README.md) for
-evidence and limits, and [current driver settings](../lib/MotorDriver/include/MotorSettings.h).
-E2 uses I2C only, rewriting the five I2C-accessible
+evidence and limits. This driver is not used by E14.
+E2 used I2C only, rewriting the five I2C-accessible
 settings at boot while explicitly relying on saved PID. It does not use motor
 serial commands. Hardware specifications below are distinct from these settings.
 

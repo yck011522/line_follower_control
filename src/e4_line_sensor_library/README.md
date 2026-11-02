@@ -1,5 +1,8 @@
 # E4 firmware - line sensor library reliability
 
+> Retired: the firmware and build environment were removed with the legacy
+> I2C motor-driver library. The instructions below are historical.
+
 Uses [LineSensor](../../lib/LineSensor/README.md) with E6's bus configuration,
 CR/LF command parser and fixed-rate schedule. Defaults are 200 Hz, 400 kHz,
 a requested 1 ms I2C timeout and a 10-second duration. No test starts on boot.

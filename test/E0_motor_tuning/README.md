@@ -93,8 +93,8 @@ oscillation is visible, and releases the outputs at the end.
 
 **The historical E1 firmware configures 500 encoder lines at startup.** It can
 replace the 2000-line setup used here. The motor's 500 ppr specification and the
-driver's 2000-line setup used here are distinct quantities. Current E2 settings
-are defined in [MotorSettings.h](../../lib/MotorDriver/include/MotorSettings.h).
+driver's 2000-line setup used here are distinct quantities. E2's historical
+settings are documented in the [E2 guide](../E2_motor_speed/README.md).
 
 ## Results and comparison
 

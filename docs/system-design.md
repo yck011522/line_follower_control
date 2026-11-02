@@ -2,6 +2,10 @@
 
 ## Architecture
 
+The following architecture describes the retired I2C motor-driver experiments,
+not E14. E14 uses direct PWM/DIR motors, a shared I2C line sensor and FM17550
+NFC reader, and BLE telemetry; see [hardware](hardware.md).
+
 ```text
 Windows PC (future Python controller)
   └─ USB serial ─ ESP32 radio bridge
@@ -19,11 +23,11 @@ Each robot:
 
 The motor driver owns low-level encoder feedback and motor speed PID control. Robot firmware supplies wheel-speed targets and reads available driver telemetry, including battery voltage. Host responsibilities include world-state generation and robot monitoring. The location and distribution of the NFC meaning dictionary remain to be decided.
 
-The current motor baseline is [type 1, dead zone 1650, pulse line 500, ratio 23,
-diameter 65 mm, PID 3/0.375/0.5](../lib/MotorDriver/include/MotorSettings.h). On ESP32 boot, rewrite the
-five I2C-accessible settings, require acknowledgments, and keep motion disabled
-until initialization succeeds. Rely on saved driver PID; it cannot be verified or
-set through the documented I2C interface. No motor-driver UART is required.
+The historical driver baseline was type 1, dead zone 1650, pulse line 500, ratio 23,
+diameter 65 mm, PID 3/0.375/0.5. On ESP32 boot, the legacy firmware rewrote the
+five I2C-accessible settings, required acknowledgments, and kept motion disabled
+until initialization succeeded. It relied on saved driver PID, which cannot be
+verified or set through the documented I2C interface. No motor-driver UART was required.
 E0 did not resolve smooth target-10 operation or validate loaded cornering.
 
 Separate buses allow independent peripheral configuration and scheduling. They do not by themselves guarantee concurrent transactions or a faster loop: driver blocking time, device conversion time, bus speed, and scheduling must be measured.

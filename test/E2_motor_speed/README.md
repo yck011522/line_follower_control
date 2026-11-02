@@ -1,5 +1,8 @@
 ﻿# E2 - I2C motor speed mapping
 
+> Retired: the firmware and build environment have been removed. Build, upload,
+> and capture instructions below are historical; results and analysis tools remain.
+
 Committed findings and plots: [results.md](results.md).
 
 E2 measures input-to-output speed response with fixed settings. The ESP32 talks
@@ -18,7 +21,6 @@ was absent at boot. There are no interactive tuning or PWM/manual-speed options.
 PID in the supplied register map. `configured=1` means the I2C writes succeeded;
 it does not verify stored PID or read back the write-only settings. Replacing or
 factory-resetting the board invalidates the stored-PID assumption. See
-[current motor settings](../../lib/MotorDriver/include/MotorSettings.h) and
 [E0 findings](../E0_motor_tuning/README.md).
 
 ## Build, upload, run
