@@ -192,7 +192,11 @@ Each car sends one Robot State packet at approximately **20 Hz**.
 | `right_speed_mm_s` | signed integer, `-32768` to `32767` | 2 | int16 | Current measured right-wheel speed in mm/s, derived from encoder feedback. Positive and negative signs indicate direction. |
 | `battery_mv` | `0-65535` | 2 | uint16 | Measured battery voltage in millivolts. E13 samples the D10 divider in each 100 Hz control cycle and filters the reading with an EMA (`k=0.02`). Example: `12420` = 12.420 V. |
 
-Python packing is `<BHHB4sHBBhhH`, with no alignment padding:
+Python packing is `<BHHB4sHBBBhhH`, with no alignment padding. The three consecutive
+`B` fields after `nfc_marker_age_ms` are `line_sensor_mask`, `controller_state`,
+and `line_follower_state` at offsets 12, 13, and 14. This matches the packed
+`Ble14::Robot` structure used by E15 and its `static_assert(sizeof(Robot) == 21)`;
+`struct.calcsize("<BHHB4sHBBBhhH")` is 21. Byte offsets:
 
 | Byte offset | Field |
 | --- | --- |
