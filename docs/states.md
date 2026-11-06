@@ -106,6 +106,12 @@ flowchart LR
     SAVED_STATE --> MERGING
 ```
 
+The 1.5-second line-loss grace period accumulates control-loop elapsed time
+only while AUTO has a positive forward target and no valid line is detected.
+Stopping, reversing, or leaving AUTO pauses the timer; reacquiring a valid line
+clears the accumulated time. A stopped car on a noisy patch therefore does not
+become `LINE_LOST` solely because it waited there.
+
 `BRANCHING`, `MERGING`, `TAG_RESULT`, and `SAVED_STATE` in the overview are
 groups/placeholders, not additional transmitted state values. The transition
 tables below define their exact meanings.

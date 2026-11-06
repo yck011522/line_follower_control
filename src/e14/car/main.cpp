@@ -139,7 +139,8 @@ namespace
     // ── Line sensor ──────────────────────────────────────────────────
     uint8_t latestLineMask = 0xFF;       // Active-low mask of the latest valid read
     uint8_t lastVisibleLineMask = 0xFF;  // Latest mask that actually showed a line
-    uint32_t lastLineVisibleAtMs = 0;
+    uint64_t accumulatedLineLostUs = 0;
+    uint64_t lastLineLossTickUs = 0;
     bool lineReadValid = false;
     uint8_t lineTxError = 0;
     bool lineShortRead = false;
@@ -306,17 +307,21 @@ namespace
 
     // Tracks line visibility: enters LINE_LOST after the grace period and restores the saved
     // state when the line returns. Returns true when AUTO steering should be skipped this tick.
-    bool updateLineLossState(uint32_t nowMs, bool lineVisible)
+    bool updateLineLossState(uint64_t nowUs, bool lineVisible, bool forwardCommanded)
     {
+        const uint64_t deltaUs = lastLineLossTickUs == 0 ? 0 : nowUs - lastLineLossTickUs;
+        lastLineLossTickUs = nowUs;
         if (lineVisible)
         {
-            lastLineVisibleAtMs = nowMs;
+            accumulatedLineLostUs = 0;
             lastVisibleLineMask = latestLineMask;
             if (lineFollowerState == LINE_LOST) lineFollowerState = savedLineFollowerState;
             return false;
         }
 
-        if (nowMs - lastLineVisibleAtMs <= kLineLostGraceMs) return false; // Short gap: keep last mask
+        if (forwardCommanded) accumulatedLineLostUs += deltaUs;
+        if (!forwardCommanded || accumulatedLineLostUs <= static_cast<uint64_t>(kLineLostGraceMs) * 1000)
+            return false; // Stopped time does not consume the line-loss grace period
 
         if (lineFollowerState != LINE_LOST)
         {
@@ -331,11 +336,11 @@ namespace
     // Runs every 100 Hz tick: tracks line loss and, in AUTO, steers the wheels toward the line.
     // Positive error means the line is to the left, so the car steers left. PD steering sets
     // how much slower the inner wheel runs.
-    void updateLineFollowing()
+    void updateLineFollowing(uint64_t nowUs)
     {
-        const uint32_t nowMs = millis();
         const bool lineVisible = lineReadValid && latestLineMask != 0xFF && latestLineMask != 0x00;
-        if (updateLineLossState(nowMs, lineVisible)) return;
+        const bool forwardCommanded = controllerState == AUTO && autoBaseSpeedMmS > 0.1f;
+        if (updateLineLossState(nowUs, lineVisible, forwardCommanded)) return;
 
         if (controllerState != AUTO || lineFollowerState == LINE_LOST) return;
         if (fabsf(autoBaseSpeedMmS) < 0.1f)
@@ -743,7 +748,7 @@ namespace
         readLineSensor();
         sampleBatteryVoltage();
         updateBatteryState(millis());
-        updateLineFollowing();
+        updateLineFollowing(nowUs);
         updateMotorControlLoop(nowUs); // Pulse snapshot, EMA filter, PI + feedforward
 
         if (nfcRunning && !nfcReader.busy()) nfcReader.startRead();
