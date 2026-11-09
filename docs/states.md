@@ -9,6 +9,11 @@ E13 implements AUTO/MANUAL, LOW_BATT, STOPPED, FOLLOW_LINE, and LINE_LOST.
 E15 additionally reports controller states 11 `NFC_REINIT_PERIODIC`, 12
 `NFC_REINIT_I2C_ERROR`, and 13 `NFC_REINIT_INVALID_TRANSITION`; their
 recovery behavior is documented in [E15 firmware](../src/e15/car/README.md).
+E16 retains states 11 and 12, reserves 13 without emitting it, and removes all
+UID-order navigation checks. Its bounded NFC recovery and command resumption
+rules are documented in [E16 firmware](../src/e16/car/README.md). For E16,
+the PC supplies effective turn bits directly; the tag-driven navigation
+proposal below does not apply.
 NFC-driven branch/merge navigation is the planned E14 extension.
 
 ## 1. Controller state
